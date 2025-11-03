@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ThousandEyes Endpoint Agents Budget Calculator</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #0b0c10;
+            --panel: #15161a;
+            --text: #e8ecef;
+            --muted: #9aa4ad;
+            --accent: #2ea8ff;
+            --accent-2: #7bd389;
+            --border: #24262c;
+            --danger: #ef476f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+            background: linear-gradient(180deg, #0b0c10 0%, #0f1117 100%);
+            color: var(--text);
+            min-height: 100svh;
+            display: grid;
+            place-items: start center;
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 880px;
+            background: color-mix(in oklab, var(--panel) 92%, black 8%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 4px 4px 16px 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0;
+            letter-spacing: 0.2px;
+        }
+
+        .subtle {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 760px) {
+            .grid {
+                grid-template-columns: 1.2fr 1fr;
+            }
+        }
+
+        .panel {
+            background: color-mix(in oklab, var(--panel) 94%, black 6%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .row-1 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+        label { font-size: 13px; color: var(--muted); }
+        .control { display: grid; gap: 6px; }
+
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 12px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #0f1117;
+            color: var(--text);
+            outline: none;
+        }
+        input::placeholder { color: #6b7280; }
+
+        .hint { font-size: 12px; color: var(--muted); }
+
+        .results {
+            display: grid;
+            gap: 12px;
+        }
+
+        .result {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #0f1218;
+        }
+
+        .result h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+        .result .value { font-size: 28px; font-weight: 700; letter-spacing: 0.4px; }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            background: #0f1218;
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 999px;
+        }
+
+        footer { margin-top: 8px; color: var(--muted); font-size: 12px; text-align: right; }
+        .danger { color: var(--danger); }
+        .ok { color: var(--accent-2); }
+        .accent { color: var(--accent); }
+
+        .stack { display: grid; gap: 10px; }
+        .stack-lg { display: grid; gap: 16px; }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <main class="container" role="main">
+        <header>
+            <div>
+                <h1>ThousandEyes Endpoint Agents Budget Calculator</h1>
+                <div class="subtle">Enter your budget and per‑agent costs to estimate how many Endpoint Agents you can purchase for Advantage and Essentials.</div>
+            </div>
+            <div class="tag" aria-live="polite" id="currencyTag">Currency: <strong class="accent" id="currencyTagValue">USD</strong></div>
+        </header>
+
+        <nav style="display:flex; gap:8px; margin:8px 0 16px 0;">
+            <button class="tab-btn" data-tab="calc" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Calculator</button>
+            <button class="tab-btn" data-tab="flows" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--muted);">Workflows</button>
+        </nav>
+
+        <section id="tab-calc" class="grid" aria-label="Calculator">
+            <div class="panel stack-lg">
+                <div class="row-1">
+                    <div class="control">
+                        <label for="budget">Total budget</label>
+                        <input id="budget" name="budget" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 25000" aria-describedby="budgetHint">
+                        <div class="hint" id="budgetHint">Total amount available to spend (same billing term as prices).</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="control">
+                        <label for="priceAdv">Advantage price per agent (flat)</label>
+                        <input id="priceAdv" name="priceAdv" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 50">
+                        <div class="hint">Used only if tiers are empty. Otherwise the tiered scale applies.</div>
+                    </div>
+                    <div class="control">
+                        <label for="priceEss">Essentials price per agent (flat)</label>
+                        <input id="priceEss" name="priceEss" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 35">
+                        <div class="hint">Used only if tiers are empty. Otherwise the tiered scale applies.</div>
+                    </div>
+                </div>
+
+                <div class="row-1">
+                    <div class="panel">
+                        <div class="stack">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label>Advantage tiers</label>
+                                <button id="addTierAdv" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Add tier</button>
+                            </div>
+                            <div class="hint">Define blocks where price decreases as you buy more. "Up to" is the cumulative agent count for that tier. Leave last "Up to" empty for no cap.</div>
+                            <div id="tiers-adv" class="stack"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row-1">
+                    <div class="panel">
+                        <div class="stack">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label>Essentials tiers</label>
+                                <button id="addTierEss" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Add tier</button>
+                            </div>
+                            <div class="hint">Define blocks where price decreases as you buy more. "Up to" is the cumulative agent count for that tier. Leave last "Up to" empty for no cap.</div>
+                            <div id="tiers-ess" class="stack"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="control">
+                        <label for="currency">Currency (ISO)</label>
+                        <input id="currency" name="currency" type="text" inputmode="text" maxlength="3" placeholder="USD" aria-describedby="curHint">
+                        <div class="hint" id="curHint">Three-letter code for formatting (USD, EUR, GBP, AUD, ...).</div>
+                    </div>
+                    <div class="control">
+                        <label for="rounding">Rounding</label>
+                        <input id="rounding" name="rounding" type="text" value="down" aria-describedby="roundHint">
+                        <div class="hint" id="roundHint">"down" to floor to whole agents, "nearest" to round to nearest.</div>
+                    </div>
+                </div>
+
+                <div class="row-1">
+                    <div class="control">
+                        <label for="showAvg">Display options</label>
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
+                            <input id="showAvg" name="showAvg" type="checkbox">
+                            <span class="hint">Show effective average price at computed quantity</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel results" aria-live="polite">
+                <div class="result" id="res-adv">
+                    <h3>Advantage agents</h3>
+                    <div class="value" id="advCount">–</div>
+                </div>
+                <div class="result" id="res-ess">
+                    <h3>Essentials agents</h3>
+                    <div class="value" id="essCount">–</div>
+                </div>
+                <div class="result" id="res-leftover-adv">
+                    <h3>Unspent budget (Advantage)</h3>
+                    <div class="value" id="leftoverAdv">–</div>
+                </div>
+                <div class="result" id="res-leftover-ess">
+                    <h3>Unspent budget (Essentials)</h3>
+                    <div class="value" id="leftoverEss">–</div>
+                </div>
+                <div class="result" id="res-avg-adv" style="display:none;">
+                    <h3>Effective average price (Advantage)</h3>
+                    <div class="value" id="avgPriceAdv">–</div>
+                </div>
+                <div class="result" id="res-avg-ess" style="display:none;">
+                    <h3>Effective average price (Essentials)</h3>
+                    <div class="value" id="avgPriceEss">–</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-flows" class="stack-lg" aria-label="Workflows" style="display:none;">
+            <div class="panel stack-lg">
+                <div class="row">
+                    <div class="control">
+                        <label for="apiBase">ThousandEyes API base URL</label>
+                        <input id="apiBase" name="apiBase" type="text" placeholder="https://api.thousandeyes.com">
+                        <div class="hint">Set your API base. Must allow CORS in browser context.</div>
+                    </div>
+                    <div class="control">
+                        <label for="apiToken">API Token</label>
+                        <input id="apiToken" name="apiToken" type="text" placeholder="TE Bearer token">
+                        <div class="hint">Stored only in your browser. Do not share.</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="control">
+                        <label for="accountGroupId">Account Group ID</label>
+                        <input id="accountGroupId" name="accountGroupId" type="text" placeholder="e.g. 12345">
+                    </div>
+                    <div class="control">
+                        <label for="switchEndpoint">License switch endpoint path</label>
+                        <input id="switchEndpoint" name="switchEndpoint" type="text" placeholder="/v6/endpoint-agents/license">
+                        <div class="hint">Full URL will be base + path. Body will include desired license.</div>
+                    </div>
+                </div>
+
+                <div class="row-1">
+                    <div class="control">
+                        <label for="enableScheduler">Scheduler</label>
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
+                            <input id="enableScheduler" name="enableScheduler" type="checkbox">
+                            <span class="hint">Enable time-of-day scheduling (runs while this page is open)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel stack-lg">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <label>Daily schedule</label>
+                    <button id="addSchedule" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Add entry</button>
+                </div>
+                <div class="hint">Create entries like 08:00–18:00 → Advantage, 18:00–08:00 → Essentials. Times are local.</div>
+                <div id="scheduleList" class="stack"></div>
+            </div>
+
+            <div class="panel results" aria-live="polite">
+                <div class="result">
+                    <h3>Current desired license</h3>
+                    <div class="value" id="desiredLicense">–</div>
+                </div>
+                <div class="result">
+                    <h3>Last API action</h3>
+                    <div class="value" id="lastAction">–</div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            Sample calculator. Enter your actual ThousandEyes pricing for accurate results.
+        </footer>
+    </main>
+
+    <script>
+        (function() {
+            // Tabs
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabCalc = document.getElementById('tab-calc');
+            const tabFlows = document.getElementById('tab-flows');
+            let activeTab = 'calc';
+            function setTab(tab) {
+                activeTab = tab;
+                tabCalc.style.display = tab === 'calc' ? '' : 'none';
+                tabFlows.style.display = tab === 'flows' ? '' : 'none';
+                tabButtons.forEach(btn => {
+                    const isActive = btn.dataset.tab === tab;
+                    btn.style.background = isActive ? '#0f1218' : 'transparent';
+                    btn.style.color = isActive ? 'var(--text)' : 'var(--muted)';
+                });
+                try {
+                    const state = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                    state.activeTab = activeTab;
+                    localStorage.setItem('teBudgetCalc', JSON.stringify(state));
+                } catch {}
+            }
+            tabButtons.forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+            const budgetEl = document.getElementById('budget');
+            const priceAdvEl = document.getElementById('priceAdv');
+            const priceEssEl = document.getElementById('priceEss');
+            const currencyEl = document.getElementById('currency');
+            const roundingEl = document.getElementById('rounding');
+            const showAvgEl = document.getElementById('showAvg');
+
+            const advCountEl = document.getElementById('advCount');
+            const essCountEl = document.getElementById('essCount');
+            const leftoverAdvEl = document.getElementById('leftoverAdv');
+            const leftoverEssEl = document.getElementById('leftoverEss');
+            const currencyTagValue = document.getElementById('currencyTagValue');
+            const avgPriceAdvEl = document.getElementById('avgPriceAdv');
+            const avgPriceEssEl = document.getElementById('avgPriceEss');
+            const resAvgAdv = document.getElementById('res-avg-adv');
+            const resAvgEss = document.getElementById('res-avg-ess');
+
+            const tiersAdvContainer = document.getElementById('tiers-adv');
+            const tiersEssContainer = document.getElementById('tiers-ess');
+            const addTierAdvBtn = document.getElementById('addTierAdv');
+            const addTierEssBtn = document.getElementById('addTierEss');
+
+            // Workflows elements
+            const apiBaseEl = document.getElementById('apiBase');
+            const apiTokenEl = document.getElementById('apiToken');
+            const accountGroupIdEl = document.getElementById('accountGroupId');
+            const switchEndpointEl = document.getElementById('switchEndpoint');
+            const enableSchedulerEl = document.getElementById('enableScheduler');
+            const scheduleListEl = document.getElementById('scheduleList');
+            const addScheduleBtn = document.getElementById('addSchedule');
+            const desiredLicenseEl = document.getElementById('desiredLicense');
+            const lastActionEl = document.getElementById('lastAction');
+
+            // Defaults you can adjust
+            const defaults = {
+                budget: '',
+                priceAdv: '',
+                priceEss: '',
+                currency: 'USD',
+                rounding: 'down',
+                showAvg: false,
+                tiersAdv: [
+                    { upTo: 500, price: 50 },
+                    { upTo: 2000, price: 45 },
+                    { upTo: null, price: 40 }
+                ],
+                tiersEss: [
+                    { upTo: 500, price: 35 },
+                    { upTo: 2000, price: 30 },
+                    { upTo: null, price: 25 }
+                ],
+                // workflows defaults
+                activeTab: 'calc',
+                apiBase: 'https://api.thousandeyes.com',
+                apiToken: '',
+                accountGroupId: '',
+                switchEndpoint: '/v6/endpoint-agents/license',
+                enableScheduler: false,
+                schedule: [
+                    { from: '08:00', to: '18:00', license: 'Advantage' },
+                    { from: '18:00', to: '08:00', license: 'Essentials' }
+                ]
+            };
+
+            // Load saved values from localStorage
+            try {
+                const saved = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                const blended = { ...defaults, ...saved };
+                for (const [k, v] of Object.entries(blended)) {
+                    const el = document.getElementById(k);
+                    if (!el || typeof v === 'undefined' || v === null) continue;
+                    if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v;
+                }
+                // render tiers from saved
+                renderTierEditor('adv', blended.tiersAdv || defaults.tiersAdv);
+                renderTierEditor('ess', blended.tiersEss || defaults.tiersEss);
+                // render schedule
+                renderSchedule(blended.schedule || defaults.schedule);
+                // set active tab
+                setTab(blended.activeTab || 'calc');
+                // seed API/config to inputs
+                apiBaseEl.value = blended.apiBase || defaults.apiBase;
+                apiTokenEl.value = blended.apiToken || defaults.apiToken;
+                accountGroupIdEl.value = blended.accountGroupId || defaults.accountGroupId;
+                switchEndpointEl.value = blended.switchEndpoint || defaults.switchEndpoint;
+                enableSchedulerEl.checked = !!(blended.enableScheduler);
+            } catch {}
+
+            function save() {
+                const data = {
+                    budget: budgetEl.value,
+                    priceAdv: priceAdvEl.value,
+                    priceEss: priceEssEl.value,
+                    currency: (currencyEl.value || 'USD').toUpperCase(),
+                    rounding: (roundingEl.value || 'down').toLowerCase(),
+                    showAvg: !!showAvgEl.checked,
+                    tiersAdv: readTiers('adv'),
+                    tiersEss: readTiers('ess'),
+                    // workflows
+                    activeTab,
+                    apiBase: apiBaseEl.value,
+                    apiToken: apiTokenEl.value,
+                    accountGroupId: accountGroupIdEl.value,
+                    switchEndpoint: switchEndpointEl.value,
+                    enableScheduler: !!enableSchedulerEl.checked,
+                    schedule: readSchedule()
+                };
+                localStorage.setItem('teBudgetCalc', JSON.stringify(data));
+            }
+
+            function fmtCurrency(n, currency) {
+                if (!isFinite(n)) return '–';
+                try {
+                    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
+                } catch {
+                    return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
+                }
+            }
+
+            function fmtInt(n) {
+                if (!isFinite(n)) return '–';
+                return new Intl.NumberFormat().format(n);
+            }
+
+            function parseNum(input) {
+                const val = typeof input === 'string' ? input.trim() : (input?.toString?.() ?? '');
+                if (val === '') return NaN;
+                const n = Number(val);
+                return isFinite(n) ? n : NaN;
+            }
+
+            function normalizeTiers(tiersRaw) {
+                const tiers = (tiersRaw || [])
+                    .map(t => ({ upTo: (t.upTo === null || t.upTo === '' || t.upTo === undefined) ? null : Number(t.upTo), price: Number(t.price) }))
+                    .filter(t => isFinite(t.price) && t.price > 0 && (t.upTo === null || (isFinite(t.upTo) && t.upTo > 0)));
+                tiers.sort((a, b) => {
+                    if (a.upTo === null) return 1;
+                    if (b.upTo === null) return -1;
+                    return a.upTo - b.upTo;
+                });
+                // ensure last tier is open-ended
+                if (!tiers.length || tiers[tiers.length - 1].upTo !== null) tiers.push({ upTo: null, price: tiers.length ? tiers[tiers.length - 1].price : NaN });
+                // remove duplicates with same upTo keeping lowest price
+                const compact = [];
+                for (const t of tiers) {
+                    const last = compact[compact.length - 1];
+                    if (last && last.upTo === t.upTo) last.price = Math.min(last.price, t.price); else compact.push(t);
+                }
+                return compact.filter(t => isFinite(t.price));
+            }
+
+            function costForQuantity(quantity, tiers) {
+                // Block/step pricing: first block up to tiers[0].upTo at price, next block at next price, etc.
+                let remaining = quantity;
+                let prevCap = 0;
+                let total = 0;
+                for (const tier of tiers) {
+                    const cap = tier.upTo === null ? Infinity : tier.upTo;
+                    const block = Math.max(0, Math.min(remaining, cap - prevCap));
+                    if (block <= 0) { prevCap = cap; continue; }
+                    total += block * tier.price;
+                    remaining -= block;
+                    prevCap = cap;
+                    if (remaining <= 0) break;
+                }
+                return total;
+            }
+
+            function maxAgentsUnderBudget(budget, tiers, roundingMode) {
+                if (!isFinite(budget) || budget <= 0 || !tiers.length) return { agents: NaN, spent: NaN, leftover: NaN };
+                const tiersNorm = normalizeTiers(tiers);
+                // Exponential then binary search to find maximum agents where cost <= budget
+                let low = 0, high = 1;
+                while (costForQuantity(high, tiersNorm) <= budget && high < 1e9) {
+                    low = high;
+                    high *= 2;
+                }
+                while (low < high) {
+                    const mid = Math.floor((low + high + 1) / 2);
+                    const cost = costForQuantity(mid, tiersNorm);
+                    if (cost <= budget) low = mid; else high = mid - 1;
+                }
+                let agents = low;
+                if (roundingMode === 'nearest') {
+                    // Try +/- 1 around low to approximate nearest under monotonic cost
+                    const costLow = costForQuantity(low, tiersNorm);
+                    const costUp = costForQuantity(low + 1, tiersNorm);
+                    if (Math.abs(budget - costUp) < Math.abs(budget - costLow) && costUp <= budget) agents = low + 1;
+                }
+                const spent = costForQuantity(agents, tiersNorm);
+                const leftover = budget - spent;
+                return { agents, spent, leftover };
+            }
+
+            function makeTierRow(kind, idx, tier) {
+                const row = document.createElement('div');
+                row.style.display = 'grid';
+                row.style.gridTemplateColumns = '1fr 1fr auto';
+                row.style.gap = '8px';
+                row.dataset.index = String(idx);
+
+                const upTo = document.createElement('input');
+                upTo.type = 'number';
+                upTo.min = '1';
+                upTo.step = '1';
+                upTo.placeholder = 'Up to (qty)';
+                upTo.value = tier.upTo == null ? '' : String(tier.upTo);
+                upTo.setAttribute('aria-label', 'Up to quantity');
+
+                const price = document.createElement('input');
+                price.type = 'number';
+                price.min = '0';
+                price.step = '0.01';
+                price.placeholder = 'Price per agent';
+                price.value = tier.price != null ? String(tier.price) : '';
+                price.setAttribute('aria-label', 'Price');
+
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.textContent = 'Remove';
+                del.style.padding = '8px 10px';
+                del.style.borderRadius = '8px';
+                del.style.border = '1px solid var(--border)';
+                del.style.background = '#0f1218';
+                del.style.color = 'var(--text)';
+
+                del.addEventListener('click', () => {
+                    const arr = readTiers(kind);
+                    arr.splice(idx, 1);
+                    renderTierEditor(kind, arr);
+                    compute();
+                });
+
+                for (const el of [upTo, price]) {
+                    el.addEventListener('input', () => {
+                        const arr = readTiers(kind);
+                        arr[idx] = { upTo: upTo.value === '' ? null : Number(upTo.value), price: Number(price.value) };
+                        renderTierEditor(kind, arr);
+                        compute();
+                    });
+                    el.addEventListener('change', () => {
+                        compute();
+                    });
+                }
+
+                row.appendChild(upTo);
+                row.appendChild(price);
+                row.appendChild(del);
+                return row;
+            }
+
+            function renderTierEditor(kind, tiers) {
+                const container = kind === 'adv' ? tiersAdvContainer : tiersEssContainer;
+                container.innerHTML = '';
+                const current = tiers && tiers.length ? tiers : [{ upTo: 500, price: 50 }, { upTo: null, price: 40 }];
+                current.forEach((t, i) => container.appendChild(makeTierRow(kind, i, t)));
+                // Save to storage after render
+                save();
+            }
+
+            function readTiers(kind) {
+                const container = kind === 'adv' ? tiersAdvContainer : tiersEssContainer;
+                const rows = Array.from(container.children);
+                return rows.map(row => {
+                    const [upToEl, priceEl] = row.querySelectorAll('input');
+                    const upToVal = upToEl.value === '' ? null : Number(upToEl.value);
+                    const priceVal = Number(priceEl.value);
+                    return { upTo: upToVal, price: priceVal };
+                });
+            }
+
+            function compute() {
+                const budget = parseNum(budgetEl.value);
+                const priceAdv = parseNum(priceAdvEl.value);
+                const priceEss = parseNum(priceEssEl.value);
+                const currency = (currencyEl.value || 'USD').toUpperCase();
+                let rounding = (roundingEl.value || 'down').toLowerCase();
+                if (rounding !== 'down' && rounding !== 'nearest') rounding = 'down';
+                const showAvg = !!showAvgEl.checked;
+
+                currencyTagValue.textContent = currency;
+
+                const tiersAdv = normalizeTiers(readTiers('adv'));
+                const tiersEss = normalizeTiers(readTiers('ess'));
+
+                let advAgents, advSpent, advLeft;
+                if (tiersAdv.length && isFinite(budget)) {
+                    const res = maxAgentsUnderBudget(budget, tiersAdv, rounding);
+                    advAgents = res.agents; advSpent = res.spent; advLeft = res.leftover;
+                } else {
+                    const raw = (isFinite(budget) && isFinite(priceAdv) && priceAdv > 0) ? budget / priceAdv : NaN;
+                    advAgents = rounding === 'nearest' ? Math.round(raw) : Math.floor(raw);
+                    advSpent = isFinite(advAgents) ? advAgents * priceAdv : NaN;
+                    advLeft = isFinite(budget) ? budget - advSpent : NaN;
+                }
+
+                let essAgents, essSpent, essLeft;
+                if (tiersEss.length && isFinite(budget)) {
+                    const res = maxAgentsUnderBudget(budget, tiersEss, rounding);
+                    essAgents = res.agents; essSpent = res.spent; essLeft = res.leftover;
+                } else {
+                    const raw = (isFinite(budget) && isFinite(priceEss) && priceEss > 0) ? budget / priceEss : NaN;
+                    essAgents = rounding === 'nearest' ? Math.round(raw) : Math.floor(raw);
+                    essSpent = isFinite(essAgents) ? essAgents * priceEss : NaN;
+                    essLeft = isFinite(budget) ? budget - essSpent : NaN;
+                }
+
+                advCountEl.textContent = fmtInt(advAgents);
+                essCountEl.textContent = fmtInt(essAgents);
+                leftoverAdvEl.textContent = fmtCurrency(advLeft, currency);
+                leftoverEssEl.textContent = fmtCurrency(essLeft, currency);
+
+                // Effective average price (spent / agents)
+                const avgAdv = isFinite(advSpent) && isFinite(advAgents) && advAgents > 0 ? (advSpent / advAgents) : NaN;
+                const avgEss = isFinite(essSpent) && isFinite(essAgents) && essAgents > 0 ? (essSpent / essAgents) : NaN;
+                avgPriceAdvEl.textContent = isFinite(avgAdv) ? fmtCurrency(avgAdv, currency) : '–';
+                avgPriceEssEl.textContent = isFinite(avgEss) ? fmtCurrency(avgEss, currency) : '–';
+                resAvgAdv.style.display = showAvg ? '' : 'none';
+                resAvgEss.style.display = showAvg ? '' : 'none';
+
+                save();
+            }
+
+            const inputs = [budgetEl, priceAdvEl, priceEssEl, currencyEl, roundingEl, showAvgEl];
+            for (const el of inputs) {
+                el.addEventListener('input', compute);
+                el.addEventListener('change', compute);
+            }
+
+            addTierAdvBtn.addEventListener('click', () => {
+                const tiers = readTiers('adv');
+                tiers.push({ upTo: '', price: '' });
+                renderTierEditor('adv', tiers);
+                compute();
+            });
+
+            addTierEssBtn.addEventListener('click', () => {
+                const tiers = readTiers('ess');
+                tiers.push({ upTo: '', price: '' });
+                renderTierEditor('ess', tiers);
+                compute();
+            });
+
+            // ---------- Workflows (scheduling) ----------
+            function timeToMinutes(t) {
+                // Expects 'HH:MM'
+                const m = /^([0-1]?\d|2[0-3]):([0-5]\d)$/.exec((t || '').trim());
+                if (!m) return NaN;
+                return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+            }
+
+            function makeScheduleRow(idx, entry) {
+                const row = document.createElement('div');
+                row.style.display = 'grid';
+                row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+                row.style.gap = '8px';
+                row.dataset.index = String(idx);
+
+                const fromEl = document.createElement('input');
+                fromEl.type = 'text';
+                fromEl.placeholder = 'From HH:MM';
+                fromEl.value = entry.from || '';
+                const toEl = document.createElement('input');
+                toEl.type = 'text';
+                toEl.placeholder = 'To HH:MM';
+                toEl.value = entry.to || '';
+                const licEl = document.createElement('select');
+                for (const opt of ['Advantage', 'Essentials']) {
+                    const o = document.createElement('option'); o.value = opt; o.textContent = opt; licEl.appendChild(o);
+                }
+                licEl.value = entry.license || 'Advantage';
+
+                const del = document.createElement('button');
+                del.type = 'button'; del.textContent = 'Remove';
+                del.style.padding = '8px 10px'; del.style.borderRadius = '8px'; del.style.border = '1px solid var(--border)'; del.style.background = '#0f1218'; del.style.color = 'var(--text)';
+
+                del.addEventListener('click', () => {
+                    const list = readSchedule();
+                    list.splice(idx, 1);
+                    renderSchedule(list);
+                    save();
+                });
+
+                for (const el of [fromEl, toEl, licEl]) {
+                    el.addEventListener('input', () => {
+                        const list = readSchedule();
+                        list[idx] = { from: fromEl.value, to: toEl.value, license: licEl.value };
+                        renderSchedule(list);
+                        save();
+                    });
+                    el.addEventListener('change', () => { save(); });
+                }
+
+                row.appendChild(fromEl);
+                row.appendChild(toEl);
+                row.appendChild(licEl);
+                row.appendChild(del);
+                return row;
+            }
+
+            function renderSchedule(entries) {
+                scheduleListEl.innerHTML = '';
+                const current = entries && entries.length ? entries : [];
+                current.forEach((e, i) => scheduleListEl.appendChild(makeScheduleRow(i, e)));
+            }
+
+            function readSchedule() {
+                const rows = Array.from(scheduleListEl.children);
+                return rows.map(row => {
+                    const [fromEl, toEl, licEl] = row.querySelectorAll('input, select');
+                    return { from: fromEl.value, to: toEl.value, license: licEl.value };
+                });
+            }
+
+            addScheduleBtn.addEventListener('click', () => {
+                const list = readSchedule();
+                list.push({ from: '', to: '', license: 'Advantage' });
+                renderSchedule(list);
+                save();
+            });
+
+            async function switchLicense(desired) {
+                const base = (apiBaseEl.value || '').replace(/\/$/, '');
+                const path = switchEndpointEl.value || '';
+                const url = base + path;
+                const token = apiTokenEl.value.trim();
+                const accountGroupId = accountGroupIdEl.value.trim();
+                if (!base || !path || !token) throw new Error('Missing API configuration');
+                const body = {
+                    accountGroupId,
+                    desiredLicense: desired
+                };
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (!resp.ok) {
+                    const text = await resp.text().catch(() => '');
+                    throw new Error(`API ${resp.status}: ${text || resp.statusText}`);
+                }
+                return await resp.json().catch(() => ({}));
+            }
+
+            function computeDesiredLicense(now = new Date()) {
+                const minutes = now.getHours() * 60 + now.getMinutes();
+                const schedule = readSchedule();
+                // Find first matching entry (wrap-around supported if to < from)
+                for (const entry of schedule) {
+                    const fromM = timeToMinutes(entry.from);
+                    const toM = timeToMinutes(entry.to);
+                    if (!isFinite(fromM) || !isFinite(toM)) continue;
+                    const wraps = toM <= fromM;
+                    const inRange = wraps ? (minutes >= fromM || minutes < toM) : (minutes >= fromM && minutes < toM);
+                    if (inRange) return entry.license;
+                }
+                return null;
+            }
+
+            let lastApplied = null;
+            async function schedulerTick() {
+                if (!enableSchedulerEl.checked) return;
+                const desired = computeDesiredLicense();
+                desiredLicenseEl.textContent = desired || '–';
+                if (!desired) return;
+                if (desired === lastApplied) return;
+                try {
+                    lastActionEl.textContent = 'Applying ' + desired + '…';
+                    await switchLicense(desired);
+                    lastApplied = desired;
+                    lastActionEl.textContent = 'Applied ' + desired + ' at ' + new Date().toLocaleTimeString();
+                } catch (e) {
+                    lastActionEl.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+                }
+            }
+
+            // Run every 30s
+            setInterval(schedulerTick, 30000);
+            enableSchedulerEl.addEventListener('change', () => { save(); schedulerTick(); });
+
+            compute();
+        })();
+    </script>
+</body>
+</html>
+
+
