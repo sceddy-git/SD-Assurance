@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ThousandEyes Endpoint Agents Budget Calculator</title>
+    <title>ThousandEyes Endpoint Agents Budget Calculator and Operational Enablement</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -153,15 +153,16 @@
     <main class="container" role="main">
         <header>
             <div>
-                <h1>ThousandEyes Endpoint Agents Budget Calculator</h1>
+                <h1>ThousandEyes Endpoint Agents Budget Calculator and Operational Enablement</h1>
                 <div class="subtle">Enter your budget and per‑agent costs to estimate how many Endpoint Agents you can purchase for Advantage and Essentials.</div>
             </div>
             <div class="tag" aria-live="polite" id="currencyTag">Currency: <strong class="accent" id="currencyTagValue">USD</strong></div>
         </header>
 
         <nav style="display:flex; gap:8px; margin:8px 0 16px 0;">
-            <button class="tab-btn" data-tab="calc" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Calculator</button>
-            <button class="tab-btn" data-tab="flows" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--muted);">Workflows</button>
+            <button class="tab-btn" data-tab="calc" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:#0f1218; color:var(--text);">EPA Calculator</button>
+            <button class="tab-btn" data-tab="flows" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--muted);">EPA Licensing</button>
+            <button class="tab-btn" data-tab="scheduler" style="padding:8px 12px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--muted);">EPA Scheduler</button>
         </nav>
 
         <section id="tab-calc" class="grid" aria-label="Calculator">
@@ -265,7 +266,7 @@
             </div>
         </section>
 
-        <section id="tab-flows" class="stack-lg" aria-label="Workflows" style="display:none;">
+        <section id="tab-flows" class="stack-lg" aria-label="EPA Licensing" style="display:none;">
             <div class="panel stack-lg">
                 <div class="row">
                     <div class="control">
@@ -291,34 +292,95 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <div class="control">
+                        <label for="agentTags">Endpoint agent tags</label>
+                        <input id="agentTags" name="agentTags" type="text" placeholder="tagA, tagB">
+                        <div class="hint">Comma-separated tags to include when switching licenses or counting agents.</div>
+                    </div>
+                    <div class="control">
+                        <label for="agentsEndpoint">Agents list endpoint path</label>
+                        <input id="agentsEndpoint" name="agentsEndpoint" type="text" placeholder="/v6/endpoint-agents">
+                        <div class="hint">Used for counting licenses per type.</div>
+                    </div>
+                </div>
+
                 <div class="row-1">
                     <div class="control">
-                        <label for="enableScheduler">Scheduler</label>
+                        <label for="dryRun">Dry run mode</label>
                         <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
-                            <input id="enableScheduler" name="enableScheduler" type="checkbox">
-                            <span class="hint">Enable time-of-day scheduling (runs while this page is open)</span>
+                            <input id="dryRun" name="dryRun" type="checkbox">
+                            <span class="hint">Skip live API calls and just log what would happen.</span>
                         </div>
+                    </div>
+                </div>
+
+                <div class="row-1">
+                    <div class="control">
+                        <button id="refreshCounts" type="button" style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:#0f1218; color:var(--text); width:100%;">Refresh license counts</button>
+                        <div class="hint">Runs the ThousandEyes agent list endpoint (filtered by tags) and summarizes Advantage vs Essentials counts.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel results" aria-live="polite">
+                <div class="result">
+                    <h3>Advantage agents (current)</h3>
+                    <div class="value" id="currentAdvCount">–</div>
+                </div>
+                <div class="result">
+                    <h3>Essentials agents (current)</h3>
+                    <div class="value" id="currentEssCount">–</div>
+                </div>
+                <div class="result">
+                    <h3>Last refresh status</h3>
+                    <div class="value" id="lastCountStatus">–</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-scheduler" class="stack-lg" aria-label="EPA Scheduler" style="display:none;">
+            <div class="panel stack-lg">
+                <div class="row-1">
+                    <div class="control">
+                        <label for="schedulerEnabled">Scheduler</label>
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 0;">
+                            <input id="schedulerEnabled" name="schedulerEnabled" type="checkbox">
+                            <span class="hint">Enable automatic EPA endpoint toggling while this page is open. Uses API base/token + dry run toggle from EPA Licensing.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="control">
+                        <label for="stateEndpoint">Endpoint control API path</label>
+                        <input id="stateEndpoint" name="stateEndpoint" type="text" placeholder="/v6/endpoint-agents/state">
+                        <div class="hint">POST target that accepts { label, action } with action = enable | disable.</div>
+                    </div>
+                    <div class="control">
+                        <label for="schedulerFrequency">Check frequency (seconds)</label>
+                        <input id="schedulerFrequency" name="schedulerFrequency" type="number" min="15" step="15" value="60">
+                        <div class="hint">How often to evaluate schedules. Minimum 15s.</div>
                     </div>
                 </div>
             </div>
 
             <div class="panel stack-lg">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                    <label>Daily schedule</label>
-                    <button id="addSchedule" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Add entry</button>
+                    <label>EPA schedules</label>
+                    <button id="addSchedulerEntry" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1218; color:var(--text);">Add schedule</button>
                 </div>
-                <div class="hint">Create entries like 08:00–18:00 → Advantage, 18:00–08:00 → Essentials. Times are local.</div>
-                <div id="scheduleList" class="stack"></div>
+                <div class="hint">Each row controls endpoints matching a label for the specified time window. Leave “to” earlier than “from” to span midnight.</div>
+                <div id="schedulerList" class="stack"></div>
             </div>
 
             <div class="panel results" aria-live="polite">
                 <div class="result">
-                    <h3>Current desired license</h3>
-                    <div class="value" id="desiredLicense">–</div>
+                    <h3>Active instructions right now</h3>
+                    <div class="value" id="schedulerSnapshot">–</div>
                 </div>
                 <div class="result">
-                    <h3>Last API action</h3>
-                    <div class="value" id="lastAction">–</div>
+                    <h3>Scheduler log</h3>
+                    <div class="value" id="schedulerLog">–</div>
                 </div>
             </div>
         </section>
@@ -334,11 +396,13 @@
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabCalc = document.getElementById('tab-calc');
             const tabFlows = document.getElementById('tab-flows');
+            const tabScheduler = document.getElementById('tab-scheduler');
             let activeTab = 'calc';
             function setTab(tab) {
                 activeTab = tab;
                 tabCalc.style.display = tab === 'calc' ? '' : 'none';
                 tabFlows.style.display = tab === 'flows' ? '' : 'none';
+                tabScheduler.style.display = tab === 'scheduler' ? '' : 'none';
                 tabButtons.forEach(btn => {
                     const isActive = btn.dataset.tab === tab;
                     btn.style.background = isActive ? '#0f1218' : 'transparent';
@@ -378,11 +442,21 @@
             const apiTokenEl = document.getElementById('apiToken');
             const accountGroupIdEl = document.getElementById('accountGroupId');
             const switchEndpointEl = document.getElementById('switchEndpoint');
-            const enableSchedulerEl = document.getElementById('enableScheduler');
-            const scheduleListEl = document.getElementById('scheduleList');
-            const addScheduleBtn = document.getElementById('addSchedule');
-            const desiredLicenseEl = document.getElementById('desiredLicense');
-            const lastActionEl = document.getElementById('lastAction');
+            const agentTagsEl = document.getElementById('agentTags');
+            const agentsEndpointEl = document.getElementById('agentsEndpoint');
+            const dryRunEl = document.getElementById('dryRun');
+            const refreshCountsBtn = document.getElementById('refreshCounts');
+            const currentAdvCountEl = document.getElementById('currentAdvCount');
+            const currentEssCountEl = document.getElementById('currentEssCount');
+            const lastCountStatusEl = document.getElementById('lastCountStatus');
+            // Scheduler elements
+            const schedulerEnabledEl = document.getElementById('schedulerEnabled');
+            const stateEndpointEl = document.getElementById('stateEndpoint');
+            const schedulerFrequencyEl = document.getElementById('schedulerFrequency');
+            const schedulerListEl = document.getElementById('schedulerList');
+            const addSchedulerEntryBtn = document.getElementById('addSchedulerEntry');
+            const schedulerSnapshotEl = document.getElementById('schedulerSnapshot');
+            const schedulerLogEl = document.getElementById('schedulerLog');
 
             // Defaults you can adjust
             const defaults = {
@@ -408,10 +482,15 @@
                 apiToken: '',
                 accountGroupId: '',
                 switchEndpoint: '/v6/endpoint-agents/license',
-                enableScheduler: false,
-                schedule: [
-                    { from: '08:00', to: '18:00', license: 'Advantage' },
-                    { from: '18:00', to: '08:00', license: 'Essentials' }
+                agentTags: '',
+                agentsEndpoint: '/v6/endpoint-agents',
+                dryRun: true,
+                schedulerEnabled: false,
+                stateEndpoint: '/v6/endpoint-agents/state',
+                schedulerFrequency: 60,
+                schedulerEntries: [
+                    { label: 'EPA-Branch-1', from: '08:00', to: '18:00', action: 'enable' },
+                    { label: 'EPA-Branch-1', from: '18:00', to: '08:00', action: 'disable' }
                 ]
             };
 
@@ -427,8 +506,6 @@
                 // render tiers from saved
                 renderTierEditor('adv', blended.tiersAdv || defaults.tiersAdv);
                 renderTierEditor('ess', blended.tiersEss || defaults.tiersEss);
-                // render schedule
-                renderSchedule(blended.schedule || defaults.schedule);
                 // set active tab
                 setTab(blended.activeTab || 'calc');
                 // seed API/config to inputs
@@ -436,7 +513,13 @@
                 apiTokenEl.value = blended.apiToken || defaults.apiToken;
                 accountGroupIdEl.value = blended.accountGroupId || defaults.accountGroupId;
                 switchEndpointEl.value = blended.switchEndpoint || defaults.switchEndpoint;
-                enableSchedulerEl.checked = !!(blended.enableScheduler);
+                agentTagsEl.value = blended.agentTags || defaults.agentTags;
+                agentsEndpointEl.value = blended.agentsEndpoint || defaults.agentsEndpoint;
+                dryRunEl.checked = blended.dryRun !== undefined ? !!blended.dryRun : defaults.dryRun;
+                schedulerEnabledEl.checked = blended.schedulerEnabled || false;
+                stateEndpointEl.value = blended.stateEndpoint || defaults.stateEndpoint;
+                schedulerFrequencyEl.value = blended.schedulerFrequency || defaults.schedulerFrequency;
+                renderSchedulerEntries(blended.schedulerEntries || defaults.schedulerEntries);
             } catch {}
 
             function save() {
@@ -455,8 +538,13 @@
                     apiToken: apiTokenEl.value,
                     accountGroupId: accountGroupIdEl.value,
                     switchEndpoint: switchEndpointEl.value,
-                    enableScheduler: !!enableSchedulerEl.checked,
-                    schedule: readSchedule()
+                    agentTags: agentTagsEl.value,
+                    agentsEndpoint: agentsEndpointEl.value,
+                    dryRun: !!dryRunEl.checked,
+                    schedulerEnabled: !!schedulerEnabledEl.checked,
+                    stateEndpoint: stateEndpointEl.value,
+                    schedulerFrequency: schedulerFrequencyEl.value,
+                    schedulerEntries: readSchedulerEntries()
                 };
                 localStorage.setItem('teBudgetCalc', JSON.stringify(data));
             }
@@ -694,94 +782,224 @@
                 compute();
             });
 
-            // ---------- Workflows (scheduling) ----------
+            function getTagList() {
+                return (agentTagsEl.value || '')
+                    .split(',')
+                    .map(tag => tag.trim())
+                    .filter(Boolean);
+            }
+            dryRunEl.addEventListener('change', () => { save(); });
+
+            const workflowInputs = [
+                apiBaseEl,
+                apiTokenEl,
+                accountGroupIdEl,
+                switchEndpointEl,
+                agentTagsEl,
+                agentsEndpointEl,
+                stateEndpointEl,
+                schedulerFrequencyEl
+            ];
+            workflowInputs.forEach(el => {
+                el.addEventListener('input', () => save());
+                el.addEventListener('change', () => save());
+            });
+
+            async function fetchLicenseCounts() {
+                const tags = getTagList();
+                if (dryRunEl.checked) {
+                    const simulated = {
+                        Advantage: Math.max(0, Number(advCountEl.textContent.replace(/[^0-9]/g, '')) || 0),
+                        Essentials: Math.max(0, Number(essCountEl.textContent.replace(/[^0-9]/g, '')) || 0)
+                    };
+                    currentAdvCountEl.textContent = fmtInt(simulated.Advantage);
+                    currentEssCountEl.textContent = fmtInt(simulated.Essentials);
+                    lastCountStatusEl.textContent = 'Dry run at ' + new Date().toLocaleTimeString();
+                    return;
+                }
+                const base = (apiBaseEl.value || '').replace(/\/$/, '');
+                const path = agentsEndpointEl.value || '';
+                const token = apiTokenEl.value.trim();
+                if (!base || !path || !token) {
+                    lastCountStatusEl.textContent = 'Missing API configuration';
+                    return;
+                }
+                const url = new URL(base + path, window.location.origin);
+                const params = new URLSearchParams();
+                tags.forEach(tag => params.append('tag', tag));
+                const finalUrl = params.toString() ? `${base + path}?${params.toString()}` : base + path;
+                try {
+                    lastCountStatusEl.textContent = 'Fetching…';
+                    const resp = await fetch(finalUrl, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (!resp.ok) {
+                        const text = await resp.text().catch(() => '');
+                        throw new Error(`API ${resp.status}: ${text || resp.statusText}`);
+                    }
+                    const data = await resp.json();
+                    const agents = data?.endpointAgents || data?.agents || data?.items || [];
+                    const counts = { Advantage: 0, Essentials: 0 };
+                    agents.forEach(agent => {
+                        const type = agent?.licenseType || agent?.license || '';
+                        if (type && counts[type] !== undefined) counts[type] += 1;
+                    });
+                    currentAdvCountEl.textContent = fmtInt(counts.Advantage);
+                    currentEssCountEl.textContent = fmtInt(counts.Essentials);
+                    lastCountStatusEl.textContent = `Updated at ${new Date().toLocaleTimeString()}`;
+                } catch (err) {
+                    lastCountStatusEl.textContent = 'Error: ' + (err?.message || String(err));
+                }
+            }
+
+            refreshCountsBtn.addEventListener('click', fetchLicenseCounts);
+
+            // ---------- EPA Scheduler ----------
             function timeToMinutes(t) {
-                // Expects 'HH:MM'
-                const m = /^([0-1]?\d|2[0-3]):([0-5]\d)$/.exec((t || '').trim());
+                const m = /^([0-1]?\\d|2[0-3]):([0-5]\\d)$/.exec((t || '').trim());
                 if (!m) return NaN;
                 return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
             }
 
-            function makeScheduleRow(idx, entry) {
+            function makeSchedulerEntryRow(entry = {}) {
                 const row = document.createElement('div');
                 row.style.display = 'grid';
-                row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+                row.style.gridTemplateColumns = '1.2fr 1fr 1fr 1fr auto';
                 row.style.gap = '8px';
-                row.dataset.index = String(idx);
+                row.className = 'scheduler-row';
+
+                const labelEl = document.createElement('input');
+                labelEl.type = 'text';
+                labelEl.placeholder = 'Label (case-sensitive)';
+                labelEl.value = entry.label || '';
 
                 const fromEl = document.createElement('input');
                 fromEl.type = 'text';
                 fromEl.placeholder = 'From HH:MM';
                 fromEl.value = entry.from || '';
+
                 const toEl = document.createElement('input');
                 toEl.type = 'text';
                 toEl.placeholder = 'To HH:MM';
                 toEl.value = entry.to || '';
-                const licEl = document.createElement('select');
-                for (const opt of ['Advantage', 'Essentials']) {
-                    const o = document.createElement('option'); o.value = opt; o.textContent = opt; licEl.appendChild(o);
-                }
-                licEl.value = entry.license || 'Advantage';
 
-                const del = document.createElement('button');
-                del.type = 'button'; del.textContent = 'Remove';
-                del.style.padding = '8px 10px'; del.style.borderRadius = '8px'; del.style.border = '1px solid var(--border)'; del.style.background = '#0f1218'; del.style.color = 'var(--text)';
+                const actionEl = document.createElement('select');
+                ['enable', 'disable'].forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+                    actionEl.appendChild(option);
+                });
+                actionEl.value = entry.action || 'enable';
 
-                del.addEventListener('click', () => {
-                    const list = readSchedule();
-                    list.splice(idx, 1);
-                    renderSchedule(list);
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.textContent = 'Remove';
+                delBtn.style.padding = '8px 10px';
+                delBtn.style.borderRadius = '8px';
+                delBtn.style.border = '1px solid var(--border)';
+                delBtn.style.background = '#0f1218';
+                delBtn.style.color = 'var(--text)';
+
+                delBtn.addEventListener('click', () => {
+                    row.remove();
                     save();
+                    resetSchedulerState();
                 });
 
-                for (const el of [fromEl, toEl, licEl]) {
-                    el.addEventListener('input', () => {
-                        const list = readSchedule();
-                        list[idx] = { from: fromEl.value, to: toEl.value, license: licEl.value };
-                        renderSchedule(list);
-                        save();
-                    });
-                    el.addEventListener('change', () => { save(); });
-                }
+                [labelEl, fromEl, toEl, actionEl].forEach(el => {
+                    el.addEventListener('input', () => { save(); resetSchedulerState(); });
+                    el.addEventListener('change', () => { save(); resetSchedulerState(); });
+                });
 
-                row.appendChild(fromEl);
-                row.appendChild(toEl);
-                row.appendChild(licEl);
-                row.appendChild(del);
+                row.append(labelEl, fromEl, toEl, actionEl, delBtn);
                 return row;
             }
 
-            function renderSchedule(entries) {
-                scheduleListEl.innerHTML = '';
-                const current = entries && entries.length ? entries : [];
-                current.forEach((e, i) => scheduleListEl.appendChild(makeScheduleRow(i, e)));
-            }
-
-            function readSchedule() {
-                const rows = Array.from(scheduleListEl.children);
-                return rows.map(row => {
-                    const [fromEl, toEl, licEl] = row.querySelectorAll('input, select');
-                    return { from: fromEl.value, to: toEl.value, license: licEl.value };
+            function renderSchedulerEntries(entries) {
+                schedulerListEl.innerHTML = '';
+                (entries && entries.length ? entries : []).forEach(entry => {
+                    schedulerListEl.appendChild(makeSchedulerEntryRow(entry));
                 });
+                if (!schedulerListEl.children.length) {
+                    schedulerListEl.appendChild(makeSchedulerEntryRow());
+                }
             }
 
-            addScheduleBtn.addEventListener('click', () => {
-                const list = readSchedule();
-                list.push({ from: '', to: '', license: 'Advantage' });
-                renderSchedule(list);
+            function readSchedulerEntries() {
+                const rows = Array.from(schedulerListEl.querySelectorAll('.scheduler-row'));
+                return rows.map(row => {
+                    const [labelEl, fromEl, toEl, actionEl] = row.querySelectorAll('input, select');
+                    return {
+                        label: labelEl.value.trim(),
+                        from: fromEl.value.trim(),
+                        to: toEl.value.trim(),
+                        action: actionEl.value
+                    };
+                }).filter(e => e.label && e.from && e.to && e.action);
+            }
+
+            addSchedulerEntryBtn.addEventListener('click', () => {
+                schedulerListEl.appendChild(makeSchedulerEntryRow());
                 save();
+                resetSchedulerState();
             });
 
-            async function switchLicense(desired) {
+            function getSchedulerFrequencyMs() {
+                const freq = Number(schedulerFrequencyEl.value);
+                const safe = isFinite(freq) && freq >= 15 ? freq : 60;
+                return safe * 1000;
+            }
+
+            function logScheduler(message) {
+                schedulerLogEl.textContent = message;
+            }
+
+            function formatSnapshot(instructions) {
+                const entries = Object.entries(instructions || {});
+                if (!entries.length) return '–';
+                return entries.map(([label, action]) => `${label}: ${action}`).join(', ');
+            }
+
+            function computeCurrentInstructions(entries) {
+                const now = new Date();
+                const minutes = now.getHours() * 60 + now.getMinutes();
+                const instructions = {};
+                for (const entry of entries) {
+                    const fromM = timeToMinutes(entry.from);
+                    const toM = timeToMinutes(entry.to);
+                    if (!isFinite(fromM) || !isFinite(toM)) continue;
+                    const wraps = toM <= fromM;
+                    const inRange = wraps ? (minutes >= fromM || minutes < toM) : (minutes >= fromM && minutes < toM);
+                    if (inRange && instructions[entry.label] === undefined) {
+                        instructions[entry.label] = entry.action;
+                    }
+                }
+                return instructions;
+            }
+
+            const lastSchedulerActions = new Map();
+            function resetSchedulerState() {
+                lastSchedulerActions.clear();
+                schedulerSnapshotEl.textContent = '–';
+            }
+
+            async function updateEndpointState(label, action) {
+                if (dryRunEl.checked) {
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                    return { dryRun: true, label, action };
+                }
                 const base = (apiBaseEl.value || '').replace(/\/$/, '');
-                const path = switchEndpointEl.value || '';
-                const url = base + path;
+                const path = stateEndpointEl.value || '';
                 const token = apiTokenEl.value.trim();
-                const accountGroupId = accountGroupIdEl.value.trim();
                 if (!base || !path || !token) throw new Error('Missing API configuration');
+                const url = base + path;
                 const body = {
-                    accountGroupId,
-                    desiredLicense: desired
+                    label,
+                    action,
+                    accountGroupId: accountGroupIdEl.value || undefined
                 };
                 const resp = await fetch(url, {
                     method: 'POST',
@@ -795,44 +1013,68 @@
                     const text = await resp.text().catch(() => '');
                     throw new Error(`API ${resp.status}: ${text || resp.statusText}`);
                 }
-                return await resp.json().catch(() => ({}));
+                return resp.json().catch(() => ({}));
             }
 
-            function computeDesiredLicense(now = new Date()) {
-                const minutes = now.getHours() * 60 + now.getMinutes();
-                const schedule = readSchedule();
-                // Find first matching entry (wrap-around supported if to < from)
-                for (const entry of schedule) {
-                    const fromM = timeToMinutes(entry.from);
-                    const toM = timeToMinutes(entry.to);
-                    if (!isFinite(fromM) || !isFinite(toM)) continue;
-                    const wraps = toM <= fromM;
-                    const inRange = wraps ? (minutes >= fromM || minutes < toM) : (minutes >= fromM && minutes < toM);
-                    if (inRange) return entry.license;
+            let schedulerTimer = null;
+            let schedulerTickInFlight = false;
+
+            async function runScheduler() {
+                if (schedulerTickInFlight) return;
+                if (!schedulerEnabledEl.checked) {
+                    schedulerSnapshotEl.textContent = '–';
+                    return;
                 }
-                return null;
-            }
-
-            let lastApplied = null;
-            async function schedulerTick() {
-                if (!enableSchedulerEl.checked) return;
-                const desired = computeDesiredLicense();
-                desiredLicenseEl.textContent = desired || '–';
-                if (!desired) return;
-                if (desired === lastApplied) return;
+                schedulerTickInFlight = true;
                 try {
-                    lastActionEl.textContent = 'Applying ' + desired + '…';
-                    await switchLicense(desired);
-                    lastApplied = desired;
-                    lastActionEl.textContent = 'Applied ' + desired + ' at ' + new Date().toLocaleTimeString();
-                } catch (e) {
-                    lastActionEl.textContent = 'Error: ' + (e && e.message ? e.message : String(e));
+                    const entries = readSchedulerEntries();
+                    const instructions = computeCurrentInstructions(entries);
+                    schedulerSnapshotEl.textContent = formatSnapshot(instructions);
+                    const labels = Object.keys(instructions);
+                    if (!labels.length) {
+                        schedulerTickInFlight = false;
+                        return;
+                    }
+                    for (const label of labels) {
+                        const action = instructions[label];
+                        if (!action) continue;
+                        if (lastSchedulerActions.get(label) === action) continue;
+                        try {
+                            await updateEndpointState(label, action);
+                            lastSchedulerActions.set(label, action);
+                            logScheduler(`Set ${label} → ${action} at ${new Date().toLocaleTimeString()}`);
+                        } catch (err) {
+                            logScheduler(`Error ${label}: ${err?.message || err}`);
+                        }
+                    }
+                } finally {
+                    schedulerTickInFlight = false;
                 }
             }
 
-            // Run every 30s
-            setInterval(schedulerTick, 30000);
-            enableSchedulerEl.addEventListener('change', () => { save(); schedulerTick(); });
+            function restartSchedulerTimer() {
+                if (schedulerTimer) clearInterval(schedulerTimer);
+                schedulerTimer = setInterval(runScheduler, getSchedulerFrequencyMs());
+            }
+
+            schedulerEnabledEl.addEventListener('change', () => {
+                save();
+                resetSchedulerState();
+                runScheduler();
+            });
+
+            schedulerFrequencyEl.addEventListener('change', () => {
+                save();
+                restartSchedulerTimer();
+            });
+
+            stateEndpointEl.addEventListener('change', () => {
+                save();
+                resetSchedulerState();
+            });
+
+            restartSchedulerTimer();
+            runScheduler();
 
             compute();
         })();
