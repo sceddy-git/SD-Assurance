@@ -1,5 +1,7 @@
 ## ThousandEyes Endpoint Agents Budget Calculator and Operational Enablement
 
+[![Deploy site](https://github.com/sceddy-git/SD-Assurance/actions/workflows/deploy.yml/badge.svg)](https://github.com/sceddy-git/SD-Assurance/actions/workflows/deploy.yml)
+
 This repository hosts a lightweight, browser‑only tool that helps you plan, license, and operate Cisco ThousandEyes Endpoint Agents (EPA). Open `index.html` directly or host it via GitHub Pages (workflow provided) to get a fully client‑side experience—no backend or build step required.
 
 ### Features
@@ -16,6 +18,10 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
   - Adjustable polling frequency and dedicated endpoint path
   - Uses the same API credentials/dry-run toggle as Licensing
   - Shows current instructions and the latest action log
+
+### Live Site
+- Latest build: https://sceddy-git.github.io/SD-Assurance/
+- The badge above reflects the status of the GitHub Pages deployment workflow. Click it to open run logs.
 
 ### Local Usage
 1. Clone/download this repository.
