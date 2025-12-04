@@ -65,6 +65,15 @@
             background: #f3f4f6;
         }
 
+        :root[data-theme="light"] .sidebar {
+            background: #f9fafb;
+        }
+
+        :root[data-theme="light"] .sidebar-nav button.active {
+            background: var(--accent);
+            color: white;
+        }
+
         * { box-sizing: border-box; }
 
         body {
@@ -74,8 +83,62 @@
             color: var(--text);
             min-height: 100svh;
             display: grid;
-            place-items: start center;
+            grid-template-columns: 240px 1fr;
+            gap: 0;
+        }
+
+        .sidebar {
+            background: color-mix(in oklab, var(--panel) 96%, black 4%);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            min-height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            margin: 0 0 16px 0;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-nav button {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--muted);
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-nav button:hover {
+            background: color-mix(in oklab, var(--panel) 90%, black 10%);
+            color: var(--text);
+        }
+
+        .sidebar-nav button.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .main-content {
             padding: 24px;
+            overflow-y: auto;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
         }
 
         .container {
@@ -196,10 +259,60 @@
             white-space: nowrap;
             border: 0;
         }
+
+        #configList table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #configList table tbody tr:hover {
+            background: color-mix(in oklab, var(--panel) 95%, black 5%);
+        }
+
+        #configList table th,
+        #configList table td {
+            padding: 12px 8px;
+        }
+
+        #configList table th {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 500;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #configList table th:last-child {
+            text-align: center;
+            width: 60px;
+        }
+
+        #configList table td {
+            font-size: 13px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #configList table td:last-child {
+            text-align: center;
+        }
+
+        .remove-config-btn:hover {
+            background: color-mix(in oklab, var(--panel) 90%, black 10%) !important;
+        }
     </style>
 </head>
 <body>
-    <main class="container" role="main">
+    <aside class="sidebar">
+        <h2>ThousandEyes</h2>
+        <nav class="sidebar-nav">
+            <button class="nav-btn active" data-page="endpoint">Endpoint Experience</button>
+            <button class="nav-btn" data-page="synthetics">Cloud and App Synthetics</button>
+        </nav>
+    </aside>
+    <div class="main-content">
+        <div id="page-endpoint" class="page-content">
+            <main class="container" role="main">
         <header>
             <div>
                 <h1>ThousandEyes Endpoint Agents Budget Calculator and Operational Enablement</h1>
@@ -461,10 +574,160 @@
         <footer>
             Sample calculator. Enter your actual ThousandEyes pricing for accurate results.
         </footer>
-    </main>
+            </main>
+        </div>
+
+        <div id="page-synthetics" class="page-content" style="display:none;">
+            <main class="container" role="main">
+                <header>
+                    <div>
+                        <h1>Cloud and App Synthetics Units Calculator</h1>
+                        <div class="subtle">Calculate units based on agent type, test interval, and test type.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="tag" aria-live="polite" id="syntheticsCurrencyTag">Currency: <strong class="accent" id="syntheticsCurrencyTagValue">USD</strong></div>
+                        <button id="syntheticsThemeToggle" type="button" style="padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; font-size:12px;" title="Toggle light/dark mode">🌙</button>
+                    </div>
+                </header>
+
+                <section class="grid" aria-label="Synthetics Calculator">
+                    <div class="panel stack-lg">
+                        <div class="row">
+                            <div class="control">
+                                <label for="agentType">Agent Type</label>
+                                <select id="agentType" name="agentType">
+                                    <option value="enterprise">Enterprise</option>
+                                    <option value="cloud">Cloud</option>
+                                </select>
+                                <div class="hint">Cloud agents use 2x the unit calculation.</div>
+                            </div>
+                            <div class="control">
+                                <label for="testInterval">Test Interval (minutes)</label>
+                                <select id="testInterval" name="testInterval">
+                                    <option value="1">1 minute</option>
+                                    <option value="2">2 minutes</option>
+                                    <option value="5">5 minutes</option>
+                                    <option value="10">10 minutes</option>
+                                    <option value="15">15 minutes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row-1">
+                            <div class="control">
+                                <label for="testType">Test Type</label>
+                                <select id="testType" name="testType">
+                                    <option value="bgp">BGP Routing</option>
+                                    <option value="network-agent-server">Network, Agent to Server</option>
+                                    <option value="network-agent-agent">Network, Agent to Agent</option>
+                                    <option value="dns-server">DNS Server</option>
+                                    <option value="dns-trace">DNS Trace, DNSSEC</option>
+                                    <option value="http-server">HTTP Server</option>
+                                    <option value="page-load">Page Load</option>
+                                    <option value="transaction">Transaction</option>
+                                    <option value="sip-rtp">SIP Server, RTP Stream</option>
+                                    <option value="voice-calls">Voice Calls</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="testTypeParams" class="stack-lg"></div>
+                    </div>
+
+                    <div class="panel results" aria-live="polite">
+                        <div class="result">
+                            <h3>Units (C)</h3>
+                            <div class="value" id="unitsResult">–</div>
+                        </div>
+                        <div class="result">
+                            <h3>Monthly Units</h3>
+                            <div class="value" id="monthlyUnitsResult">–</div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="panel" style="margin-top:16px;">
+                    <div class="stack">
+                        <label>Calculation Breakdown</label>
+                        <div id="calculationDisplay" style="font-family:monospace; font-size:13px; line-height:1.8; color:var(--muted); padding:12px; background:color-mix(in oklab, var(--panel) 90%, black 10%); border-radius:8px; border:1px solid var(--border);">
+                            Select test type and enter parameters to see calculation
+                        </div>
+                        <button id="addToConfigList" type="button" style="margin-top:12px; padding:8px 16px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; cursor:pointer; font-size:14px; font-weight:500;">
+                            Add to Configuration List
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top:16px;">
+                    <div class="stack-lg">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                            <label style="margin:0;">Test Configurations</label>
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <label for="contractDuration" style="font-size:13px; color:var(--muted);">Contract:</label>
+                                    <select id="contractDuration" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:13px; cursor:pointer;">
+                                        <option value="12">1 Year</option>
+                                        <option value="36">3 Years</option>
+                                        <option value="60">5 Years</option>
+                                    </select>
+                                </div>
+                                <div style="font-size:14px; color:var(--muted);">
+                                    Total Units (×1000): <strong class="accent" id="totalUnitsDisplay">0</strong>
+                                </div>
+                                <div style="font-size:14px; color:var(--muted);">
+                                    <span id="totalCostLabel">Total Cost (1 Year):</span> <strong class="accent" id="totalCostDisplay">$0.00</strong>
+                                </div>
+                                <button id="clearConfigList" type="button" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; font-size:12px;">
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div id="configList" style="min-height:100px;">
+                            <div style="text-align:center; padding:40px; color:var(--muted); font-size:14px;">
+                                No configurations added yet. Configure a test above and click "Add to Configuration List".
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <footer>
+                    Units calculator for Cloud and App Synthetics tests.
+                </footer>
+            </main>
+        </div>
+    </div>
 
     <script>
         (function() {
+            // Page navigation
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const pageEndpoint = document.getElementById('page-endpoint');
+            const pageSynthetics = document.getElementById('page-synthetics');
+            let activePage = 'endpoint';
+
+            function setPage(page) {
+                activePage = page;
+                pageEndpoint.style.display = page === 'endpoint' ? '' : 'none';
+                pageSynthetics.style.display = page === 'synthetics' ? '' : 'none';
+                navButtons.forEach(btn => {
+                    const isActive = btn.dataset.page === page;
+                    btn.classList.toggle('active', isActive);
+                });
+                try {
+                    const state = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                    state.activePage = activePage;
+                    localStorage.setItem('teBudgetCalc', JSON.stringify(state));
+                } catch {}
+            }
+
+            navButtons.forEach(btn => btn.addEventListener('click', () => setPage(btn.dataset.page)));
+
+            // Load saved page
+            try {
+                const saved = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                if (saved.activePage) setPage(saved.activePage);
+            } catch {}
+
             // Tabs
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabCalc = document.getElementById('tab-calc');
@@ -491,13 +754,22 @@
             
             // Theme toggle
             const themeToggle = document.getElementById('themeToggle');
+            const syntheticsThemeToggle = document.getElementById('syntheticsThemeToggle');
             const root = document.documentElement;
             const THEME_KEY = 'teTheme';
             
             function setTheme(theme) {
                 root.setAttribute('data-theme', theme);
-                themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
-                themeToggle.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+                const icon = theme === 'light' ? '🌙' : '☀️';
+                const title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+                if (themeToggle) {
+                    themeToggle.textContent = icon;
+                    themeToggle.title = title;
+                }
+                if (syntheticsThemeToggle) {
+                    syntheticsThemeToggle.textContent = icon;
+                    syntheticsThemeToggle.title = title;
+                }
                 try {
                     localStorage.setItem(THEME_KEY, theme);
                 } catch {}
@@ -518,10 +790,19 @@
                 }
             }
             
-            themeToggle.addEventListener('click', () => {
-                const current = root.getAttribute('data-theme') || 'dark';
-                setTheme(current === 'light' ? 'dark' : 'light');
-            });
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const current = root.getAttribute('data-theme') || 'dark';
+                    setTheme(current === 'light' ? 'dark' : 'light');
+                });
+            }
+            
+            if (syntheticsThemeToggle) {
+                syntheticsThemeToggle.addEventListener('click', () => {
+                    const current = root.getAttribute('data-theme') || 'dark';
+                    setTheme(current === 'light' ? 'dark' : 'light');
+                });
+            }
             
             initTheme();
             
@@ -1389,6 +1670,559 @@
             runScheduler();
 
             compute();
+
+            // ========== Cloud and App Synthetics Calculator ==========
+            const agentTypeEl = document.getElementById('agentType');
+            const testIntervalEl = document.getElementById('testInterval');
+            const testTypeEl = document.getElementById('testType');
+            const testTypeParamsEl = document.getElementById('testTypeParams');
+            const unitsResultEl = document.getElementById('unitsResult');
+            const monthlyUnitsResultEl = document.getElementById('monthlyUnitsResult');
+            const calculationDisplayEl = document.getElementById('calculationDisplay');
+
+            const MONTHLY_DAYS = 24 * 31; // 24 hrs * 31 days
+
+            // Test type parameter configurations
+            const testTypeConfigs = {
+                'bgp': { params: [] },
+                'network-agent-server': { params: [{ id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 }] },
+                'network-agent-agent': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'twoWay', label: 'Two-way testing', type: 'checkbox', default: false }
+                ]},
+                'dns-server': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'numServers', label: 'Number of Servers', type: 'number', default: 1 }
+                ]},
+                'dns-trace': { params: [{ id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 }] },
+                'http-server': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'timeout', label: 'Timeout (seconds)', type: 'number', default: 5 }
+                ]},
+                'page-load': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'pageLoadTimeout', label: 'Page Load Timeout (seconds)', type: 'number', default: 5 },
+                    { id: 'pageLoadInterval', label: 'Page Load Interval (minutes)', type: 'number', default: 5 },
+                    { id: 'httpTimeout', label: 'HTTP Timeout (seconds)', type: 'number', default: 5 },
+                    { id: 'httpInterval', label: 'HTTP Interval (minutes)', type: 'number', default: 1 }
+                ]},
+                'transaction': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'timeout', label: 'Timeout (seconds)', type: 'number', default: 5 }
+                ]},
+                'sip-rtp': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'timeout', label: 'Timeout (seconds)', type: 'number', default: 5 }
+                ]},
+                'voice-calls': { params: [
+                    { id: 'numAgents', label: 'Number of Agents', type: 'number', default: 1 },
+                    { id: 'sipTimeout', label: 'SIP Timeout (seconds)', type: 'number', default: 5 },
+                    { id: 'rtpTimeout', label: 'RTP Timeout (seconds)', type: 'number', default: 5 }
+                ]}
+            };
+
+            function renderTestTypeParams() {
+                const testType = testTypeEl.value;
+                const config = testTypeConfigs[testType] || { params: [] };
+                testTypeParamsEl.innerHTML = '';
+
+                config.params.forEach(param => {
+                    const control = document.createElement('div');
+                    control.className = 'control';
+                    const label = document.createElement('label');
+                    label.setAttribute('for', param.id);
+                    label.textContent = param.label;
+                    control.appendChild(label);
+
+                    if (param.type === 'checkbox') {
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.id = param.id;
+                        input.name = param.id;
+                        input.checked = param.default || false;
+                        input.addEventListener('change', calculateSynthetics);
+                        control.appendChild(input);
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.id = param.id;
+                        input.name = param.id;
+                        input.min = '1';
+                        input.step = param.id.includes('Timeout') || param.id.includes('Interval') ? '1' : '1';
+                        input.value = param.default || '1';
+                        input.addEventListener('input', calculateSynthetics);
+                        control.appendChild(input);
+                    }
+
+                    testTypeParamsEl.appendChild(control);
+                });
+                calculateSynthetics();
+            }
+
+            function calculateSynthetics() {
+                const agentType = agentTypeEl.value;
+                const interval = parseFloat(testIntervalEl.value) || 1;
+                const testType = testTypeEl.value;
+                const isCloud = agentType === 'cloud';
+                const multiplier = isCloud ? 2 : 1;
+
+                let units = 0;
+                const config = testTypeConfigs[testType] || { params: [] };
+
+                // Get parameter values
+                const params = {};
+                config.params.forEach(param => {
+                    const el = document.getElementById(param.id);
+                    if (el) {
+                        if (param.type === 'checkbox') {
+                            params[param.id] = el.checked;
+                        } else {
+                            params[param.id] = parseFloat(el.value) || param.default || 1;
+                        }
+                    }
+                });
+
+                // Calculate based on test type
+                // Formula: (60/interval) * 24 * 31 for interval-based calculations
+                switch(testType) {
+                    case 'bgp':
+                        units = 8 * ((60 / 15) * MONTHLY_DAYS);
+                        break;
+                    case 'network-agent-server':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'network-agent-agent':
+                        const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
+                        break;
+                    case 'dns-server':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
+                        break;
+                    case 'dns-trace':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'http-server':
+                        units = ((params.timeout || 5) / 2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'page-load':
+                        const pageLoadTimeout = params.pageLoadTimeout || 5;
+                        const pageLoadInterval = params.pageLoadInterval || 5;
+                        const httpTimeout = params.httpTimeout || 5;
+                        const httpInterval = params.httpInterval || 1;
+                        const part1 = pageLoadTimeout / pageLoadInterval;
+                        const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
+                        units = (part1 + part2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'transaction':
+                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'sip-rtp':
+                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'voice-calls':
+                        const sipTimeout = params.sipTimeout || 5;
+                        const rtpTimeout = params.rtpTimeout || 5;
+                        units = (sipTimeout + rtpTimeout) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                }
+
+                // Store base units before applying multiplier
+                const baseUnits = units;
+
+                // Build calculation breakdown
+                let calcBreakdown = '';
+                const intervalCalc = `(60 / ${interval}) * 24 * 31`;
+                const intervalValue = (60 / interval) * MONTHLY_DAYS;
+                
+                switch(testType) {
+                    case 'bgp':
+                        calcBreakdown = `C = 8 units * (60 mins * 24 hrs * 31 days) / 15 mins\n`;
+                        calcBreakdown += `C = 8 * ((60 / 15) * 24 * 31)\n`;
+                        calcBreakdown += `C = 8 * ${((60 / 15) * MONTHLY_DAYS).toFixed(2)}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'network-agent-server':
+                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'network-agent-agent':
+                        const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
+                        const twoWayNote = params.twoWay ? ` (two-way: ${params.numAgents || 1} * 2)` : '';
+                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${agentCount} agents${twoWayNote}\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${agentCount}\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${agentCount}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'dns-server':
+                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents * ${params.numServers || 1} servers\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'dns-trace':
+                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'http-server':
+                        const timeout = params.timeout || 5;
+                        const timeoutHalf = timeout / 2;
+                        calcBreakdown = `C = (timeout / 2) * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = (${timeout} / 2) * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${timeoutHalf} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'page-load':
+                        const pageLoadTimeout = params.pageLoadTimeout || 5;
+                        const pageLoadInterval = params.pageLoadInterval || 5;
+                        const httpTimeout = params.httpTimeout || 5;
+                        const httpInterval = params.httpInterval || 1;
+                        const part1 = pageLoadTimeout / pageLoadInterval;
+                        const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
+                        calcBreakdown = `C = ((page load timeout / page load interval) + (HTTP timeout * (1/HTTP interval - 1/page load interval))) * (60 mins * 24 hrs * 31 days) / ${interval} mins * agents\n`;
+                        calcBreakdown += `C = ((${pageLoadTimeout} / ${pageLoadInterval}) + (${httpTimeout} * (1/${httpInterval} - 1/${pageLoadInterval}))) * ((60 / ${interval}) * 24 * 31) * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = (${part1.toFixed(2)} + ${part2.toFixed(2)}) * ${((60 / interval) * MONTHLY_DAYS).toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'transaction':
+                        const transTimeout = params.timeout || 5;
+                        calcBreakdown = `C = timeout * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = ${transTimeout} * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${transTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'sip-rtp':
+                        const sipRtpTimeout = params.timeout || 5;
+                        calcBreakdown = `C = timeout * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = ${sipRtpTimeout} * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${sipRtpTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                    case 'voice-calls':
+                        const sipTimeout = params.sipTimeout || 5;
+                        const rtpTimeout = params.rtpTimeout || 5;
+                        const totalTimeout = sipTimeout + rtpTimeout;
+                        calcBreakdown = `C = (SIP timeout + RTP timeout) * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = (${sipTimeout} + ${rtpTimeout}) * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${totalTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        break;
+                }
+
+                // Apply cloud multiplier
+                units = units * multiplier;
+
+                // Add cloud multiplier to breakdown if needed
+                if (isCloud) {
+                    calcBreakdown += `\n\nCloud agent multiplier: 2x\n`;
+                    calcBreakdown += `C = ${baseUnits.toFixed(2)} * 2\n`;
+                }
+                calcBreakdown += `\nC = ${units.toFixed(2)} units`;
+
+                // Display results
+                unitsResultEl.textContent = Math.round(units).toLocaleString();
+                monthlyUnitsResultEl.textContent = Math.round(units).toLocaleString();
+                calculationDisplayEl.textContent = calcBreakdown;
+            }
+
+            // ========== Configuration List Management ==========
+            const addToConfigListBtn = document.getElementById('addToConfigList');
+            const clearConfigListBtn = document.getElementById('clearConfigList');
+            const configListEl = document.getElementById('configList');
+            const totalUnitsDisplayEl = document.getElementById('totalUnitsDisplay');
+            const totalCostDisplayEl = document.getElementById('totalCostDisplay');
+            const contractDurationEl = document.getElementById('contractDuration');
+            const UNIT_COST = 0.85; // Cost per unit per month
+            let configList = [];
+
+            // Load saved configurations
+            function loadConfigList() {
+                try {
+                    const saved = localStorage.getItem('teSyntheticsConfigs');
+                    if (saved) {
+                        configList = JSON.parse(saved);
+                        // Migrate old configs that might have originalUnits or unrounded units
+                        configList = configList.map(config => {
+                            if (config.originalUnits !== undefined) {
+                                // Already migrated
+                                return config;
+                            } else if (config.units > 1000) {
+                                // Old format - likely has unrounded units, migrate it
+                                const roundedUnits = Math.ceil(config.units / 1000);
+                                return {
+                                    ...config,
+                                    originalUnits: config.units,
+                                    units: roundedUnits
+                                };
+                            }
+                            // Assume it's already rounded (for new configs)
+                            return config;
+                        });
+                        saveConfigList(); // Save migrated configs
+                        renderConfigList();
+                    }
+                } catch (e) {
+                    console.error('Failed to load config list:', e);
+                }
+            }
+
+            // Save configurations
+            function saveConfigList() {
+                try {
+                    localStorage.setItem('teSyntheticsConfigs', JSON.stringify(configList));
+                } catch (e) {
+                    console.error('Failed to save config list:', e);
+                }
+            }
+
+            // Get current configuration
+            function getCurrentConfig() {
+                const agentType = agentTypeEl.value;
+                const interval = parseFloat(testIntervalEl.value) || 1;
+                const testType = testTypeEl.value;
+                const params = {};
+                
+                // Get all parameter values
+                const config = testTypeConfigs[testType] || { params: [] };
+                config.params.forEach(param => {
+                    const el = document.getElementById(param.id);
+                    if (el) {
+                        if (param.type === 'checkbox') {
+                            params[param.id] = el.checked;
+                        } else {
+                            params[param.id] = parseFloat(el.value) || param.default || 1;
+                        }
+                    }
+                });
+
+                // Calculate units for this config
+                const isCloud = agentType === 'cloud';
+                const multiplier = isCloud ? 2 : 1;
+                let units = 0;
+
+                switch(testType) {
+                    case 'bgp':
+                        units = 8 * ((60 / 15) * MONTHLY_DAYS);
+                        break;
+                    case 'network-agent-server':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'network-agent-agent':
+                        const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
+                        break;
+                    case 'dns-server':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
+                        break;
+                    case 'dns-trace':
+                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'http-server':
+                        units = ((params.timeout || 5) / 2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'page-load':
+                        const pageLoadTimeout = params.pageLoadTimeout || 5;
+                        const pageLoadInterval = params.pageLoadInterval || 5;
+                        const httpTimeout = params.httpTimeout || 5;
+                        const httpInterval = params.httpInterval || 1;
+                        const part1 = pageLoadTimeout / pageLoadInterval;
+                        const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
+                        units = (part1 + part2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'transaction':
+                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'sip-rtp':
+                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                    case 'voice-calls':
+                        const sipTimeout = params.sipTimeout || 5;
+                        const rtpTimeout = params.rtpTimeout || 5;
+                        units = (sipTimeout + rtpTimeout) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        break;
+                }
+                units = units * multiplier;
+
+                // Divide by 1000 and round up
+                const roundedUnits = Math.ceil(units / 1000);
+
+                return {
+                    id: Date.now(),
+                    agentType,
+                    interval,
+                    testType,
+                    params,
+                    units: roundedUnits,
+                    originalUnits: Math.round(units) // Keep original for reference if needed
+                };
+            }
+
+            // Get test type display name
+            function getTestTypeName(testType) {
+                const names = {
+                    'bgp': 'BGP Routing',
+                    'network-agent-server': 'Network, Agent to Server',
+                    'network-agent-agent': 'Network, Agent to Agent',
+                    'dns-server': 'DNS Server',
+                    'dns-trace': 'DNS Trace, DNSSEC',
+                    'http-server': 'HTTP Server',
+                    'page-load': 'Page Load',
+                    'transaction': 'Transaction',
+                    'sip-rtp': 'SIP Server, RTP Stream',
+                    'voice-calls': 'Voice Calls'
+                };
+                return names[testType] || testType;
+            }
+
+            // Format configuration summary
+            function formatConfigSummary(config) {
+                let summary = `${getTestTypeName(config.testType)} - ${config.agentType === 'cloud' ? 'Cloud' : 'Enterprise'}`;
+                summary += ` - ${config.interval} min interval`;
+                
+                if (config.params.numAgents) {
+                    summary += ` - ${config.params.numAgents} agent${config.params.numAgents > 1 ? 's' : ''}`;
+                }
+                if (config.params.numServers) {
+                    summary += ` - ${config.params.numServers} server${config.params.numServers > 1 ? 's' : ''}`;
+                }
+                if (config.params.twoWay) {
+                    summary += ' - Two-way';
+                }
+                if (config.params.timeout) {
+                    summary += ` - ${config.params.timeout}s timeout`;
+                }
+                if (config.params.sipTimeout && config.params.rtpTimeout) {
+                    summary += ` - SIP:${config.params.sipTimeout}s, RTP:${config.params.rtpTimeout}s`;
+                }
+                
+                return summary;
+            }
+
+            // Format currency
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(amount);
+            }
+
+            // Render configuration list
+            function renderConfigList() {
+                if (configList.length === 0) {
+                    configListEl.innerHTML = `
+                        <div style="text-align:center; padding:40px; color:var(--muted); font-size:14px;">
+                            No configurations added yet. Configure a test above and click "Add to Configuration List".
+                        </div>
+                    `;
+                    totalUnitsDisplayEl.textContent = '0';
+                    const contractMonths = parseInt(contractDurationEl.value) || 12;
+                    const contractYears = contractMonths / 12;
+                    const costText = contractYears === 1 ? 'Total Cost (1 Year):' : 
+                                    contractYears === 3 ? 'Total Cost (3 Years):' : 
+                                    'Total Cost (5 Years):';
+                    const totalCostLabelEl = document.getElementById('totalCostLabel');
+                    if (totalCostLabelEl) {
+                        totalCostLabelEl.textContent = costText;
+                    }
+                    totalCostDisplayEl.textContent = '$0.00';
+                    return;
+                }
+
+                let html = '<table style="width:100%; border-collapse:collapse;">';
+                html += '<thead><tr style="border-bottom:1px solid var(--border);">';
+                html += '<th style="text-align:left; padding:8px; font-size:13px; color:var(--muted); font-weight:500;">Configuration</th>';
+                html += '<th style="text-align:right; padding:8px; font-size:13px; color:var(--muted); font-weight:500;">Units (×1000)</th>';
+                html += '<th style="text-align:right; padding:8px; font-size:13px; color:var(--muted); font-weight:500;">Cost/Month</th>';
+                html += '<th style="width:60px; padding:8px;"></th>';
+                html += '</tr></thead><tbody>';
+
+                const contractMonths = parseInt(contractDurationEl.value) || 12;
+                const contractYears = contractMonths / 12;
+                
+                // Sum original units, then divide by 1000 and round up
+                let totalOriginalUnits = 0;
+                let totalCost = 0;
+                configList.forEach((config, index) => {
+                    const monthlyCost = config.units * UNIT_COST;
+                    const totalCostForConfig = monthlyCost * contractMonths;
+                    // Sum original units for total calculation
+                    totalOriginalUnits += (config.originalUnits || config.units * 1000);
+                    totalCost += totalCostForConfig;
+                    html += '<tr style="border-bottom:1px solid var(--border);">';
+                    html += `<td style="padding:12px 8px; font-size:13px; color:var(--text);">${formatConfigSummary(config)}</td>`;
+                    html += `<td style="text-align:right; padding:12px 8px; font-size:13px; color:var(--text); font-weight:500;">${config.units.toLocaleString()}</td>`;
+                    html += `<td style="text-align:right; padding:12px 8px; font-size:13px; color:var(--text); font-weight:500;">${formatCurrency(monthlyCost)}</td>`;
+                    html += `<td style="text-align:center; padding:12px 8px;">`;
+                    html += `<button type="button" class="remove-config-btn" data-index="${index}" style="padding:4px 8px; border-radius:4px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; font-size:11px;">Remove</button>`;
+                    html += `</td>`;
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                configListEl.innerHTML = html;
+
+                // Add event listeners to remove buttons
+                configListEl.querySelectorAll('.remove-config-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.dataset.index);
+                        configList.splice(index, 1);
+                        saveConfigList();
+                        renderConfigList();
+                    });
+                });
+
+                // Calculate total units: sum original units, divide by 1000, round up
+                const totalRoundedUnits = Math.ceil(totalOriginalUnits / 1000);
+                totalUnitsDisplayEl.textContent = totalRoundedUnits.toLocaleString();
+                
+                // Update total cost label and display
+                const totalCostLabelEl = document.getElementById('totalCostLabel');
+                const costText = contractYears === 1 ? 'Total Cost (1 Year):' : 
+                                contractYears === 3 ? 'Total Cost (3 Years):' : 
+                                'Total Cost (5 Years):';
+                if (totalCostLabelEl) {
+                    totalCostLabelEl.textContent = costText;
+                }
+                totalCostDisplayEl.textContent = formatCurrency(totalCost);
+            }
+
+            // Add current configuration to list
+            addToConfigListBtn.addEventListener('click', () => {
+                const config = getCurrentConfig();
+                configList.push(config);
+                saveConfigList();
+                renderConfigList();
+            });
+
+            // Clear all configurations
+            clearConfigListBtn.addEventListener('click', () => {
+                if (configList.length > 0 && confirm('Are you sure you want to clear all configurations?')) {
+                    configList = [];
+                    saveConfigList();
+                    renderConfigList();
+                }
+            });
+
+            // Update cost when contract duration changes
+            contractDurationEl.addEventListener('change', () => {
+                renderConfigList();
+            });
+
+            // Event listeners
+            agentTypeEl.addEventListener('change', calculateSynthetics);
+            testIntervalEl.addEventListener('change', calculateSynthetics);
+            testTypeEl.addEventListener('change', () => {
+                renderTestTypeParams();
+            });
+
+            // Initialize
+            renderTestTypeParams();
+            loadConfigList();
         })();
     </script>
 </body>
