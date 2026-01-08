@@ -538,8 +538,8 @@
                 </div>
                 <div class="row">
                     <div class="control">
-                        <label for="stateEndpoint">Endpoint control API path</label>
-                        <input id="stateEndpoint" name="stateEndpoint" type="text" placeholder="/v6/endpoint-agents/state">
+                        <label for="stateEndpoint">API Token</label>
+                        <input id="stateEndpoint" name="stateEndpoint" type="password" placeholder="Enter API token">
                         <div class="hint">POST target that accepts { label, action } with action = enable | disable.</div>
                     </div>
                     <div class="control">
@@ -566,7 +566,7 @@
                 </div>
                 <div class="result">
                     <h3>Scheduler log</h3>
-                    <div class="value" id="schedulerLog">–</div>
+                    <textarea id="schedulerLog" class="value" rows="10" style="width: 100%; font-family: monospace; resize: vertical;" readonly></textarea>
                 </div>
             </div>
         </section>
@@ -1547,7 +1547,9 @@
             }
 
             function logScheduler(message) {
-                schedulerLogEl.textContent = message;
+                const timestamp = new Date().toISOString();
+                schedulerLogEl.value += `[${timestamp}] ${message}\n`;
+                schedulerLogEl.scrollTop = schedulerLogEl.scrollHeight;
             }
 
             function formatSnapshot(instructions) {
