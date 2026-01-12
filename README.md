@@ -8,6 +8,8 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
 - **EPA Calculator** – Enter a budget, tiered pricing for Advantage/Essentials, and rounding preferences. The tool computes:
   - Maximum agents under the supplied budget (tier-aware)
   - Unspent budget and effective blended price (optional toggle)
+  - Multi-currency support with automatic exchange rate conversion
+  - Customizable tiered pricing with reset to defaults functionality
   - Persistent values via `localStorage`
 - **EPA Licensing** – Manage operational insights with:
   - API base/token/account group configuration + dry-run toggle
@@ -18,6 +20,20 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
   - Adjustable polling frequency and dedicated endpoint path
   - Uses the same API credentials/dry-run toggle as Licensing
   - Shows current instructions and the latest action log
+  - Backend logging support via textarea with timestamps and auto-scroll
+- **Cloud and Traffic Insight Flow Calculator** – Estimate costs for ThousandEyes Cloud Insights:
+  - **ThousandEyes Flow Cost Estimator** – Calculate flow units and costs:
+    - Daily flows input (converted to flows per second for costing)
+    - Unit cost configuration (default $0.85/unit/month)
+    - Yearly cost calculations
+  - **Cloud Size Estimate** – Estimate based on VPC count, monthly traffic volume, and log retention
+  - **AWS Cost Calculator** – Estimate AWS infrastructure costs for Cloud Insights integration:
+    - VPC Flow Logs costs
+    - S3 storage costs
+    - S3 PUT request costs
+    - SNS notification costs
+    - Data transfer costs
+    - Integration guide modal with detailed AWS setup instructions
 
 ### Live Site
 - Latest build: https://sceddy-git.github.io/SD-Assurance/
