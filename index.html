@@ -359,9 +359,17 @@
                         <div class="stack">
                             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                                 <label>Advantage tiers</label>
-                                <button id="addTierAdv" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);">Add tier</button>
+                                <div style="display:flex; gap:8px;">
+                                    <button id="resetTierAdv" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:12px;" title="Reset to default tiers">Reset to Default</button>
+                                    <button id="addTierAdv" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);">Add tier</button>
+                                </div>
                             </div>
                             <div class="hint">Threshold-based pricing: "Up to" defines the maximum quantity for that tier. If you cross a threshold, ALL agents are priced at that tier's rate. Leave last "Up to" empty for no cap.</div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; padding:8px; background:var(--bg); border-radius:6px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--muted);">
+                                <div>Up to (qty)</div>
+                                <div id="tier-price-header-adv">Price per agent</div>
+                                <div></div>
+                            </div>
                             <div id="tiers-adv" class="stack"></div>
                         </div>
                     </div>
@@ -372,9 +380,17 @@
                         <div class="stack">
                             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
                                 <label>Essentials tiers</label>
-                                <button id="addTierEss" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);">Add tier</button>
+                                <div style="display:flex; gap:8px;">
+                                    <button id="resetTierEss" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:12px;" title="Reset to default tiers">Reset to Default</button>
+                                    <button id="addTierEss" type="button" style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);">Add tier</button>
+                                </div>
                             </div>
                             <div class="hint">Threshold-based pricing: "Up to" defines the maximum quantity for that tier. If you cross a threshold, ALL agents are priced at that tier's rate. Leave last "Up to" empty for no cap.</div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; padding:8px; background:var(--bg); border-radius:6px; margin-bottom:8px; font-size:12px; font-weight:600; color:var(--muted);">
+                                <div>Up to (qty)</div>
+                                <div id="tier-price-header-ess">Price per agent</div>
+                                <div></div>
+                            </div>
                             <div id="tiers-ess" class="stack"></div>
                         </div>
                     </div>
@@ -1173,6 +1189,17 @@
             const tiersEssContainer = document.getElementById('tiers-ess');
             const addTierAdvBtn = document.getElementById('addTierAdv');
             const addTierEssBtn = document.getElementById('addTierEss');
+            const resetTierAdvBtn = document.getElementById('resetTierAdv');
+            const resetTierEssBtn = document.getElementById('resetTierEss');
+            
+            // Verify containers exist
+            if (!tiersAdvContainer || !tiersEssContainer) {
+                console.error('Tier containers not found!', { tiersAdvContainer, tiersEssContainer });
+            }
+            
+            // Store USD base values for tier prices (will be initialized after defaults is defined)
+            let tiersAdvUSD;
+            let tiersEssUSD;
 
             // Workflows elements
             const apiBaseEl = document.getElementById('apiBase');
@@ -1205,14 +1232,24 @@
                 showAvg: false,
                 showMultiCurrency: false,
                 tiersAdv: [
-                    { upTo: 500, price: 50 },
-                    { upTo: 2000, price: 45 },
-                    { upTo: null, price: 40 }
+                    { upTo: 249, price: 14.60 },
+                    { upTo: 499, price: 13.00 },
+                    { upTo: 999, price: 11.75 },
+                    { upTo: 2499, price: 8.75 },
+                    { upTo: 4999, price: 7.50 },
+                    { upTo: 9999, price: 6.40 },
+                    { upTo: 24999, price: 5.30 },
+                    { upTo: null, price: 4.20 }
                 ],
                 tiersEss: [
-                    { upTo: 500, price: 35 },
-                    { upTo: 2000, price: 30 },
-                    { upTo: null, price: 25 }
+                    { upTo: 249, price: 6.00 },
+                    { upTo: 499, price: 6.00 },
+                    { upTo: 999, price: 4.79 },
+                    { upTo: 2499, price: 3.18 },
+                    { upTo: 4999, price: 3.01 },
+                    { upTo: 9999, price: 2.50 },
+                    { upTo: 24999, price: 2.38 },
+                    { upTo: null, price: 1.95 }
                 ],
                 // workflows defaults
                 activeTab: 'calc',
@@ -1232,6 +1269,10 @@
                 ]
             };
 
+            // Initialize USD base values for tier prices (default tiers are in USD)
+            tiersAdvUSD = [...defaults.tiersAdv];
+            tiersEssUSD = [...defaults.tiersEss];
+
             // Load saved values from localStorage
             try {
                 const saved = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
@@ -1241,9 +1282,64 @@
                     if (!el || typeof v === 'undefined' || v === null) continue;
                     if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v;
                 }
-                // render tiers from saved
-                renderTierEditor('adv', blended.tiersAdv || defaults.tiersAdv);
-                renderTierEditor('ess', blended.tiersEss || defaults.tiersEss);
+                // render tiers from saved, but use defaults if tiers are missing or empty
+                // Check if saved tiers exist and have valid data
+                const hasValidAdvTiers = saved.tiersAdv && Array.isArray(saved.tiersAdv) && saved.tiersAdv.length > 0 && saved.tiersAdv.some(t => t.price != null && isFinite(t.price));
+                const hasValidEssTiers = saved.tiersEss && Array.isArray(saved.tiersEss) && saved.tiersEss.length > 0 && saved.tiersEss.some(t => t.price != null && isFinite(t.price));
+                
+                const tiersAdv = hasValidAdvTiers ? saved.tiersAdv : defaults.tiersAdv;
+                const tiersEss = hasValidEssTiers ? saved.tiersEss : defaults.tiersEss;
+                
+                // Initialize USD base values (assume saved tiers are in the saved currency, convert to USD if needed)
+                const savedCurrency = (saved.currency || 'USD').toUpperCase();
+                if (savedCurrency === 'USD') {
+                    tiersAdvUSD = tiersAdv.map(t => ({ upTo: t.upTo, price: t.price }));
+                    tiersEssUSD = tiersEss.map(t => ({ upTo: t.upTo, price: t.price }));
+                } else {
+                    // If saved currency is not USD, try to convert back to USD using cached rates
+                    try {
+                        const CACHE_KEY = `teExchangeRates_USD`;
+                        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                        if (cached.rates && cached.rates[savedCurrency]) {
+                            const rate = cached.rates[savedCurrency];
+                            tiersAdvUSD = tiersAdv.map(t => ({
+                                upTo: t.upTo,
+                                price: t.price != null && isFinite(t.price) ? t.price / rate : t.price
+                            }));
+                            tiersEssUSD = tiersEss.map(t => ({
+                                upTo: t.upTo,
+                                price: t.price != null && isFinite(t.price) ? t.price / rate : t.price
+                            }));
+                        } else {
+                            // No cached rates, use defaults as USD base
+                            tiersAdvUSD = [...defaults.tiersAdv];
+                            tiersEssUSD = [...defaults.tiersEss];
+                        }
+                    } catch {
+                        // Error, use defaults as USD base
+                        tiersAdvUSD = [...defaults.tiersAdv];
+                        tiersEssUSD = [...defaults.tiersEss];
+                    }
+                }
+                
+                // Ensure USD base values are never empty
+                if (!tiersAdvUSD || tiersAdvUSD.length === 0) {
+                    tiersAdvUSD = [...defaults.tiersAdv];
+                }
+                if (!tiersEssUSD || tiersEssUSD.length === 0) {
+                    tiersEssUSD = [...defaults.tiersEss];
+                }
+                
+                // Use saved tiers if valid, otherwise use USD defaults
+                const tiersToRenderAdv = (tiersAdv && tiersAdv.length > 0 && tiersAdv.some(t => t.price != null && isFinite(t.price))) 
+                    ? tiersAdv 
+                    : (tiersAdvUSD && tiersAdvUSD.length > 0 ? tiersAdvUSD : defaults.tiersAdv);
+                const tiersToRenderEss = (tiersEss && tiersEss.length > 0 && tiersEss.some(t => t.price != null && isFinite(t.price))) 
+                    ? tiersEss 
+                    : (tiersEssUSD && tiersEssUSD.length > 0 ? tiersEssUSD : defaults.tiersEss);
+                
+                renderTierEditor('adv', tiersToRenderAdv);
+                renderTierEditor('ess', tiersToRenderEss);
                 // set active tab
                 setTab(blended.activeTab || 'calc');
                 // seed API/config to inputs
@@ -1258,7 +1354,103 @@
                 stateEndpointEl.value = blended.stateEndpoint || defaults.stateEndpoint;
                 schedulerFrequencyEl.value = blended.schedulerFrequency || defaults.schedulerFrequency;
                 renderSchedulerEntries(blended.schedulerEntries || defaults.schedulerEntries);
-            } catch {}
+            } catch {
+                // If loading fails, initialize with defaults
+                tiersAdvUSD = [...defaults.tiersAdv];
+                tiersEssUSD = [...defaults.tiersEss];
+                renderTierEditor('adv', defaults.tiersAdv);
+                renderTierEditor('ess', defaults.tiersEss);
+            }
+
+            // Ensure USD base values are initialized (use defaults if empty)
+            if (!tiersAdvUSD || tiersAdvUSD.length === 0) {
+                tiersAdvUSD = [...defaults.tiersAdv];
+            }
+            if (!tiersEssUSD || tiersEssUSD.length === 0) {
+                tiersEssUSD = [...defaults.tiersEss];
+            }
+
+            // ALWAYS ensure tiers are rendered - force render defaults if containers are empty
+            if (!tiersAdvContainer || !tiersAdvContainer.children.length) {
+                console.log('Initializing Advantage tiers with defaults');
+                renderTierEditor('adv', defaults.tiersAdv);
+                tiersAdvUSD = [...defaults.tiersAdv];
+            }
+            if (!tiersEssContainer || !tiersEssContainer.children.length) {
+                console.log('Initializing Essentials tiers with defaults');
+                renderTierEditor('ess', defaults.tiersEss);
+                tiersEssUSD = [...defaults.tiersEss];
+            }
+
+            // Initialize tier headers with current currency
+            const initialCurrency = (currencyEl?.value || 'USD').toUpperCase();
+            if (currencyEl) currencyEl.dataset.previousCurrency = initialCurrency;
+            
+            // On initial load, ensure tiers are rendered
+            // If currency is USD, just update headers without conversion
+            // Otherwise, convert from USD defaults to the selected currency
+            if (initialCurrency === 'USD') {
+                // Ensure tiers are rendered (they should be, but double-check)
+                if (!tiersAdvContainer.children.length) {
+                    renderTierEditor('adv', tiersAdvUSD.length > 0 ? tiersAdvUSD : defaults.tiersAdv);
+                }
+                if (!tiersEssContainer.children.length) {
+                    renderTierEditor('ess', tiersEssUSD.length > 0 ? tiersEssUSD : defaults.tiersEss);
+                }
+                // Just update headers, tiers are already in USD
+                const symbol = getCurrencySymbol('USD');
+                const headerAdv = document.getElementById('tier-price-header-adv');
+                const headerEss = document.getElementById('tier-price-header-ess');
+                if (headerAdv) headerAdv.textContent = `Price per agent (${symbol})`;
+                if (headerEss) headerEss.textContent = `Price per agent (${symbol})`;
+            } else {
+                // Convert from USD defaults to selected currency
+                // But first ensure we have tiers to convert
+                if (!tiersAdvContainer.children.length || !tiersEssContainer.children.length) {
+                    renderTierEditor('adv', tiersAdvUSD.length > 0 ? tiersAdvUSD : defaults.tiersAdv);
+                    renderTierEditor('ess', tiersEssUSD.length > 0 ? tiersEssUSD : defaults.tiersEss);
+                }
+                updateTierHeaders();
+            }
+
+            // Final safety check: ensure tiers are rendered after a short delay
+            setTimeout(() => {
+                console.log('=== TIER INITIALIZATION CHECK ===');
+                console.log('Containers:', {
+                    advContainer: tiersAdvContainer ? 'found' : 'MISSING',
+                    essContainer: tiersEssContainer ? 'found' : 'MISSING',
+                    advChildren: tiersAdvContainer ? tiersAdvContainer.children.length : 0,
+                    essChildren: tiersEssContainer ? tiersEssContainer.children.length : 0
+                });
+                console.log('Default tiers:', {
+                    advCount: defaults.tiersAdv.length,
+                    essCount: defaults.tiersEss.length,
+                    advSample: defaults.tiersAdv[0],
+                    essSample: defaults.tiersEss[0]
+                });
+                
+                if (!tiersAdvContainer || !tiersAdvContainer.children.length) {
+                    console.log('Safety check: Rendering default Advantage tiers');
+                    tiersAdvUSD = [...defaults.tiersAdv];
+                    renderTierEditor('adv', defaults.tiersAdv);
+                    console.log('After render - adv children:', tiersAdvContainer ? tiersAdvContainer.children.length : 'null');
+                }
+                if (!tiersEssContainer || !tiersEssContainer.children.length) {
+                    console.log('Safety check: Rendering default Essentials tiers');
+                    tiersEssUSD = [...defaults.tiersEss];
+                    renderTierEditor('ess', defaults.tiersEss);
+                    console.log('After render - ess children:', tiersEssContainer ? tiersEssContainer.children.length : 'null');
+                }
+                
+                // Final verification
+                console.log('Final state:', {
+                    advContainer: tiersAdvContainer ? tiersAdvContainer.children.length : 'null',
+                    essContainer: tiersEssContainer ? tiersEssContainer.children.length : 'null',
+                    advUSD: tiersAdvUSD.length,
+                    essUSD: tiersEssUSD.length
+                });
+                console.log('=== END CHECK ===');
+            }, 100);
 
             function save() {
                 const data = {
@@ -1300,6 +1492,172 @@
             function fmtInt(n) {
                 if (!isFinite(n)) return '–';
                 return new Intl.NumberFormat().format(n);
+            }
+
+            function getCurrencySymbol(currency) {
+                try {
+                    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' });
+                    const parts = formatter.formatToParts(1);
+                    const symbol = parts.find(part => part.type === 'currency');
+                    return symbol ? symbol.value : currency || 'USD';
+                } catch {
+                    return currency || 'USD';
+                }
+            }
+
+            // Update USD base values when tiers are manually edited
+            function updateUSDBaseValues() {
+                const currentCurrency = (currencyEl?.value || 'USD').toUpperCase();
+                if (currentCurrency === 'USD') {
+                    // Already in USD, just save current values
+                    tiersAdvUSD = readTiers('adv').map(t => ({ upTo: t.upTo, price: t.price }));
+                    tiersEssUSD = readTiers('ess').map(t => ({ upTo: t.upTo, price: t.price }));
+                } else {
+                    // Try to get cached rates synchronously
+                    try {
+                        const CACHE_KEY = `teExchangeRates_USD`;
+                        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                        if (cached.rates && cached.rates[currentCurrency]) {
+                            const rate = cached.rates[currentCurrency];
+                            const currentAdv = readTiers('adv');
+                            const currentEss = readTiers('ess');
+                            
+                            tiersAdvUSD = currentAdv.map(t => ({
+                                upTo: t.upTo,
+                                price: t.price != null && isFinite(t.price) ? t.price / rate : t.price
+                            }));
+                            tiersEssUSD = currentEss.map(t => ({
+                                upTo: t.upTo,
+                                price: t.price != null && isFinite(t.price) ? t.price / rate : t.price
+                            }));
+                        } else {
+                            // No cached rates, assume current values are in USD (fallback)
+                            tiersAdvUSD = readTiers('adv').map(t => ({ upTo: t.upTo, price: t.price }));
+                            tiersEssUSD = readTiers('ess').map(t => ({ upTo: t.upTo, price: t.price }));
+                        }
+                    } catch {
+                        // Error reading cache, assume current values are in USD
+                        tiersAdvUSD = readTiers('adv').map(t => ({ upTo: t.upTo, price: t.price }));
+                        tiersEssUSD = readTiers('ess').map(t => ({ upTo: t.upTo, price: t.price }));
+                    }
+                }
+            }
+
+            async function updateTierHeaders() {
+                const currency = (currencyEl?.value || 'USD').toUpperCase();
+                const symbol = getCurrencySymbol(currency);
+                const headerAdv = document.getElementById('tier-price-header-adv');
+                const headerEss = document.getElementById('tier-price-header-ess');
+                if (headerAdv) headerAdv.textContent = `Price per agent (${symbol})`;
+                if (headerEss) headerEss.textContent = `Price per agent (${symbol})`;
+                
+                // Get exchange rates (always from USD base for tier conversion)
+                const CACHE_KEY = `teExchangeRates_USD`;
+                let rates = null;
+                try {
+                    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                    if (cached.rates && cached.timestamp && (Date.now() - cached.timestamp < 60 * 60 * 1000)) {
+                        rates = cached.rates;
+                    } else {
+                        // Fetch USD-based rates
+                        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            rates = data.rates || {};
+                            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                                rates,
+                                timestamp: Date.now(),
+                                base: 'USD'
+                            }));
+                        }
+                    }
+                } catch {}
+                
+                const exchangeRates = rates ? { rates, base: 'USD' } : null;
+                if (!exchangeRates || !exchangeRates.rates) {
+                    // If no rates available, use USD base values or defaults
+                    const tiersAdv = readTiers('adv');
+                    const tiersEss = readTiers('ess');
+                    const advToRender = tiersAdv.length > 0 ? tiersAdv : (tiersAdvUSD.length > 0 ? tiersAdvUSD : defaults.tiersAdv);
+                    const essToRender = tiersEss.length > 0 ? tiersEss : (tiersEssUSD.length > 0 ? tiersEssUSD : defaults.tiersEss);
+                    renderTierEditor('adv', advToRender);
+                    renderTierEditor('ess', essToRender);
+                    return;
+                }
+
+                const usdRates = exchangeRates.rates;
+                const previousCurrency = currencyEl?.dataset?.previousCurrency || 'USD';
+                
+                // If currency changed, update USD base values from current tiers (convert from previous currency to USD)
+                if (previousCurrency !== currency) {
+                    if (previousCurrency === 'USD') {
+                        // Was in USD, just save current values
+                        tiersAdvUSD = readTiers('adv').map(t => ({ upTo: t.upTo, price: t.price }));
+                        tiersEssUSD = readTiers('ess').map(t => ({ upTo: t.upTo, price: t.price }));
+                    } else if (usdRates[previousCurrency]) {
+                        // Convert from previous currency back to USD
+                        const prevRate = usdRates[previousCurrency];
+                        const currentAdv = readTiers('adv');
+                        const currentEss = readTiers('ess');
+                        
+                        tiersAdvUSD = currentAdv.map(t => ({
+                            upTo: t.upTo,
+                            price: t.price != null && isFinite(t.price) ? t.price / prevRate : t.price
+                        }));
+                        tiersEssUSD = currentEss.map(t => ({
+                            upTo: t.upTo,
+                            price: t.price != null && isFinite(t.price) ? t.price / prevRate : t.price
+                        }));
+                    }
+                }
+                
+                // Convert from USD base to target currency
+                // Use defaults if USD base values are empty (shouldn't happen, but safety check)
+                let baseAdv = (tiersAdvUSD && tiersAdvUSD.length > 0) ? tiersAdvUSD : defaults.tiersAdv;
+                let baseEss = (tiersEssUSD && tiersEssUSD.length > 0) ? tiersEssUSD : defaults.tiersEss;
+                
+                let convertedAdv = baseAdv;
+                let convertedEss = baseEss;
+                
+                if (currency !== 'USD' && usdRates[currency]) {
+                    // Convert Advantage tiers from USD to target currency
+                    convertedAdv = baseAdv.map(tier => {
+                        if (tier.price == null || !isFinite(tier.price)) return tier;
+                        let convertedPrice = tier.price * usdRates[currency];
+                        
+                        // Round to appropriate decimal places
+                        if (currency === 'JPY') {
+                            convertedPrice = Math.round(convertedPrice);
+                        } else {
+                            convertedPrice = Math.round(convertedPrice * 100) / 100;
+                        }
+                        
+                        return { ...tier, price: convertedPrice };
+                    });
+                    
+                    // Convert Essentials tiers from USD to target currency
+                    convertedEss = baseEss.map(tier => {
+                        if (tier.price == null || !isFinite(tier.price)) return tier;
+                        let convertedPrice = tier.price * usdRates[currency];
+                        
+                        if (currency === 'JPY') {
+                            convertedPrice = Math.round(convertedPrice);
+                        } else {
+                            convertedPrice = Math.round(convertedPrice * 100) / 100;
+                        }
+                        
+                        return { ...tier, price: convertedPrice };
+                    });
+                }
+                
+                // Render converted tiers
+                if (convertedAdv.length > 0) renderTierEditor('adv', convertedAdv);
+                if (convertedEss.length > 0) renderTierEditor('ess', convertedEss);
+                
+                // Store current currency for next change
+                if (currencyEl) currencyEl.dataset.previousCurrency = currency;
+                
+                compute();
             }
 
             function parseNum(input) {
@@ -1390,10 +1748,13 @@
                 const price = document.createElement('input');
                 price.type = 'number';
                 price.min = '0';
-                price.step = '0.01';
-                price.placeholder = 'Price per agent';
+                const currency = (currencyEl?.value || 'USD').toUpperCase();
+                // Set step based on currency (2 decimals for most, 0 for JPY)
+                price.step = currency === 'JPY' ? '1' : '0.01';
+                const currencySymbol = getCurrencySymbol(currency);
+                price.placeholder = `Price per agent (${currencySymbol})`;
                 price.value = tier.price != null ? String(tier.price) : '';
-                price.setAttribute('aria-label', 'Price');
+                price.setAttribute('aria-label', `Price in ${currency}`);
 
                 const del = document.createElement('button');
                 del.type = 'button';
@@ -1416,9 +1777,12 @@
                         const arr = readTiers(kind);
                         arr[idx] = { upTo: upTo.value === '' ? null : Number(upTo.value), price: Number(price.value) };
                         renderTierEditor(kind, arr);
+                        // Update USD base values when tier is edited
+                        updateUSDBaseValues();
                         compute();
                     });
                     el.addEventListener('change', () => {
+                        updateUSDBaseValues();
                         compute();
                     });
                 }
@@ -1431,9 +1795,31 @@
 
             function renderTierEditor(kind, tiers) {
                 const container = kind === 'adv' ? tiersAdvContainer : tiersEssContainer;
+                if (!container) {
+                    console.error(`Container not found for ${kind} tiers`);
+                    return;
+                }
+                console.log(`renderTierEditor(${kind}):`, { tiersCount: tiers ? tiers.length : 0, tiers });
                 container.innerHTML = '';
-                const current = tiers && tiers.length ? tiers : [{ upTo: 500, price: 50 }, { upTo: null, price: 40 }];
-                current.forEach((t, i) => container.appendChild(makeTierRow(kind, i, t)));
+                const current = tiers && tiers.length ? tiers : (kind === 'adv' ? defaults.tiersAdv : defaults.tiersEss);
+                if (!current || current.length === 0) {
+                    console.warn(`No tiers to render for ${kind}, using defaults`);
+                    const defaultTiers = kind === 'adv' ? defaults.tiersAdv : defaults.tiersEss;
+                    console.log(`Rendering ${defaultTiers.length} default tiers for ${kind}`);
+                    defaultTiers.forEach((t, i) => {
+                        const row = makeTierRow(kind, i, t);
+                        container.appendChild(row);
+                        console.log(`Appended tier ${i} to ${kind} container`);
+                    });
+                } else {
+                    console.log(`Rendering ${current.length} tiers for ${kind}`);
+                    current.forEach((t, i) => {
+                        const row = makeTierRow(kind, i, t);
+                        container.appendChild(row);
+                        console.log(`Appended tier ${i} to ${kind} container`);
+                    });
+                }
+                console.log(`After renderTierEditor(${kind}): container has ${container.children.length} children`);
                 // Save to storage after render
                 save();
             }
@@ -1600,6 +1986,12 @@
                 el.addEventListener('change', compute);
             }
 
+            // Update tier headers when currency changes
+            currencyEl.addEventListener('change', () => {
+                updateTierHeaders();
+                compute();
+            });
+
             showMultiCurrencyEl.addEventListener('change', () => {
                 compute();
                 save();
@@ -1617,6 +2009,21 @@
                 tiers.push({ upTo: '', price: '' });
                 renderTierEditor('ess', tiers);
                 compute();
+            });
+
+            // Reset to default tiers
+            resetTierAdvBtn.addEventListener('click', () => {
+                if (confirm('Reset Advantage tiers to default values? This will replace all current tiers.')) {
+                    renderTierEditor('adv', defaults.tiersAdv);
+                    compute();
+                }
+            });
+
+            resetTierEssBtn.addEventListener('click', () => {
+                if (confirm('Reset Essentials tiers to default values? This will replace all current tiers.')) {
+                    renderTierEditor('ess', defaults.tiersEss);
+                    compute();
+                }
             });
 
             // Exchange rate fetching
