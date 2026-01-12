@@ -308,6 +308,7 @@
         <nav class="sidebar-nav">
             <button class="nav-btn active" data-page="endpoint">Endpoint Experience</button>
             <button class="nav-btn" data-page="synthetics">Cloud and App Synthetics</button>
+            <button class="nav-btn" data-page="flowcalc">Cloud and Traffic Insight Flow Calculator</button>
         </nav>
     </aside>
     <div class="main-content">
@@ -695,6 +696,343 @@
                 </footer>
             </main>
         </div>
+
+        <div id="page-flowcalc" class="page-content" style="display:none;">
+            <main class="container" role="main">
+                <header>
+                    <div>
+                        <h1>Cloud and Traffic Insight Flow Calculator</h1>
+                        <div class="subtle">Calculate flow units and estimate AWS costs for ThousandEyes Cloud Insights Flow Logs integration.</div>
+                    </div>
+                </header>
+
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+                    <!-- Flow Estimator -->
+                    <div class="panel stack-lg">
+                        <h2>Flow Estimator</h2>
+                        
+                        <!-- Daily Flow Estimate Section -->
+                        <div class="stack-md" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 2px solid var(--border);">
+                            <h3 style="margin-bottom: 12px; font-size: 1.1em; color: var(--accent);">Daily Flow Estimate</h3>
+                            <div class="control">
+                                <label for="dailyFlows">Daily Flows</label>
+                                <input id="dailyFlows" type="number" min="0" value="0" step="1">
+                                <div class="hint">Total number of flows per day</div>
+                            </div>
+                            <div class="control">
+                                <label for="flowUnitCost">Unit Cost ($/unit/month)</label>
+                                <input id="flowUnitCost" type="number" min="0" value="0.85" step="0.01">
+                                <div class="hint">Cost per unit per month</div>
+                            </div>
+                        </div>
+
+                        <!-- Cloud Size Estimate Section -->
+                        <div class="stack-md">
+                            <h3 style="margin-bottom: 12px; font-size: 1.1em; color: var(--accent);">Cloud Size Estimate</h3>
+                            <div class="control">
+                                <label for="flowVpcCount">Number of VPCs</label>
+                                <input id="flowVpcCount" type="number" min="1" value="10" step="1">
+                                <div class="hint">Total number of VPCs with flow logs enabled</div>
+                            </div>
+                            <div class="control">
+                                <label for="flowTrafficGB">Monthly Traffic Volume (GB)</label>
+                                <input id="flowTrafficGB" type="number" min="0" value="100" step="1">
+                                <div class="hint">Total network traffic volume per month in GB</div>
+                            </div>
+                            <div class="control">
+                                <label for="flowLogRetention">Log Retention (months)</label>
+                                <input id="flowLogRetention" type="number" min="1" value="3" step="1">
+                                <div class="hint">How long to retain flow logs in S3</div>
+                            </div>
+                        </div>
+                        <div class="result">
+                            <h3>Flow Calculations</h3>
+                            <div class="stack-sm" style="margin-top: 12px;">
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>Calculation Method:</span>
+                                    <strong id="flowMethodResult" style="color: var(--accent);">–</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>Flows Per Second (FPS):</span>
+                                    <strong id="flowFPSResult">–</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>Estimated Flow Units:</span>
+                                    <strong id="flowUnitsResult">–</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>Monthly Unit Cost:</span>
+                                    <strong id="flowMonthlyCostResult">–</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid var(--accent);">
+                                    <span style="font-weight: 600;">Yearly Unit Cost:</span>
+                                    <strong class="accent" id="flowYearlyCostResult" style="font-size: 1.2em;">–</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AWS Cost Calculator -->
+                    <div class="panel stack-lg">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h2>AWS Cost Calculator <span style="color: var(--accent); font-size: 0.8em; font-weight: normal;">(ESTIMATE)</span></h2>
+                            <button id="viewIntegrationGuide" type="button" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px;" title="View Integration Guide">
+                                📖 View Integration Guide
+                            </button>
+                        </div>
+                        <div class="stack-md">
+                            <div class="control">
+                                <label for="awsFlowLogGB">Flow Log Data Captured (GB/month)</label>
+                                <input id="awsFlowLogGB" type="number" min="0" value="100" step="1">
+                                <div class="hint">Volume of flow log data captured per month</div>
+                            </div>
+                            <div class="control">
+                                <label for="awsS3StorageGB">S3 Storage (GB)</label>
+                                <input id="awsS3StorageGB" type="number" min="0" value="500" step="1">
+                                <div class="hint">Total storage in S3 bucket (including retention)</div>
+                            </div>
+                            <div class="control">
+                                <label for="awsPutRequests">S3 PUT Requests (per 1,000)</label>
+                                <input id="awsPutRequests" type="number" min="0" value="10" step="1">
+                                <div class="hint">Number of PUT requests in thousands</div>
+                            </div>
+                            <div class="control">
+                                <label for="awsSNSRequests">SNS Requests (per million)</label>
+                                <input id="awsSNSRequests" type="number" min="0" value="1" step="0.1">
+                                <div class="hint">Number of SNS notifications in millions</div>
+                            </div>
+                            <div class="control">
+                                <label for="awsDataTransferGB">Data Transfer Out (GB)</label>
+                                <input id="awsDataTransferGB" type="number" min="0" value="50" step="1">
+                                <div class="hint">Data transfer from S3 to ThousandEyes (outbound)</div>
+                            </div>
+                        </div>
+                        <div class="result">
+                            <h3>Monthly AWS Costs</h3>
+                            <div class="stack-sm" style="margin-top: 12px;">
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>VPC Flow Logs Capture:</span>
+                                    <strong id="awsFlowLogCost">$0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>S3 Storage:</span>
+                                    <strong id="awsS3StorageCost">$0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>S3 PUT Requests:</span>
+                                    <strong id="awsPutCost">$0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>SNS Notifications:</span>
+                                    <strong id="awsSNSCost">$0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                                    <span>Data Transfer:</span>
+                                    <strong id="awsTransferCost">$0.00</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid var(--accent);">
+                                    <span style="font-weight: 600;">Total Monthly Cost <span style="color: var(--accent); font-size: 0.9em; font-weight: normal;">(ESTIMATE)</span>:</span>
+                                    <strong class="accent" id="awsTotalCost" style="font-size: 1.2em;">$0.00</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-top: 24px;">
+                    <h3>AWS Cost Breakdown</h3>
+                    <div class="stack-sm" style="margin-top: 12px;">
+                        <div class="hint">
+                            <strong>VPC Flow Logs Capture:</strong> $0.50 per GB of flow log data captured
+                        </div>
+                        <div class="hint">
+                            <strong>S3 Storage:</strong> ~$0.023 per GB/month (Standard storage, first 50 TB)
+                        </div>
+                        <div class="hint">
+                            <strong>S3 PUT Requests:</strong> $0.005 per 1,000 requests
+                        </div>
+                        <div class="hint">
+                            <strong>SNS Notifications:</strong> $0.50 per 1 million requests
+                        </div>
+                        <div class="hint">
+                            <strong>Data Transfer:</strong> $0.09 per GB (first 10 TB/month, S3 to Internet)
+                        </div>
+                        <div class="hint" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                            <strong>Note:</strong> These are estimated costs based on standard AWS pricing. Actual costs may vary based on your AWS region, usage patterns, and any applicable discounts. Use the <a href="https://calculator.aws/#/" target="_blank" style="color: var(--accent);">AWS Pricing Calculator</a> for more accurate estimates.
+                        </div>
+                    </div>
+                </div>
+
+                <footer>
+                    Flow calculator for ThousandEyes Cloud Insights. AWS costs are estimates based on standard pricing.
+                </footer>
+            </main>
+        </div>
+
+        <!-- Integration Guide Modal -->
+        <div id="integrationGuideModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; overflow-y: auto;">
+            <div style="max-width: 900px; margin: 40px auto; background: var(--panel); border-radius: 12px; padding: 32px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); position: relative;">
+                <button id="closeIntegrationGuide" type="button" style="position: absolute; top: 16px; right: 16px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 18px;" title="Close">×</button>
+                <div style="max-height: 80vh; overflow-y: auto; padding-right: 16px;">
+                    <h1 style="margin-bottom: 24px; color: var(--accent);">ThousandEyes Cloud Insights AWS Integration Script Guide</h1>
+                    
+                    <div class="stack-lg">
+                        <section>
+                            <h2>1. Introduction and Purpose</h2>
+                            <p>The <code>ThousandEyes_Cloud_Insights.sh</code> script is a <strong>Bash utility</strong> designed to simplify and accelerate the deployment and maintenance of the necessary AWS Identity and Access Management (IAM) resources required for <strong>ThousandEyes Cloud Insights</strong> integrations (specifically for Inventory and FlowLogs).</p>
+                            
+                            <h3>Key Features</h3>
+                            <ul>
+                                <li><strong>Multi-Account Support</strong>: The script allows the operator to select one or more configured AWS CLI profiles (representing different AWS accounts) to execute creation or update tasks simultaneously.</li>
+                                <li><strong>Automated Policy Management</strong>: It hardcodes the latest required Trust and Permissions policies, ensuring consistency and compliance with ThousandEyes requirements.</li>
+                                <li><strong>Comprehensive Remediation</strong>: It includes functions to search and automatically update policies based on fixed naming conventions (InventoryUpdate) or based on specific policy content (InventoryUpdateCustom).</li>
+                            </ul>
+                        </section>
+
+                        <section>
+                            <h2>2. Business Case and Impact</h2>
+                            <h3>Value Proposition: Speed, Compliance, and Resolution</h3>
+                            <p>The ThousandEyes_Cloud_Insights.sh script is not just a utility; it is a critical tool designed to accelerate time-to-value and ensure compliance for the ThousandEyes Cloud Insights integration.</p>
+                            
+                            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                                <thead>
+                                    <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                                        <th style="padding: 12px; text-align: left;">Category</th>
+                                        <th style="padding: 12px; text-align: left;">Impact Statement</th>
+                                        <th style="padding: 12px; text-align: left;">Benefit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><strong>Operational Speed</strong></td>
+                                        <td style="padding: 12px;">Reduces deployment time from hours to minutes across single or multiple AWS accounts.</td>
+                                        <td style="padding: 12px;">Customers can start collecting and visualizing cloud network data faster, significantly accelerating their Time-to-Value (TTV).</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><strong>Compliance & Quality</strong></td>
+                                        <td style="padding: 12px;">Guarantees all AWS security and format requirements are met by hardcoding the latest IAM policies and the mandatory VPC Flow Log fields.</td>
+                                        <td style="padding: 12px;">Eliminates integration failure due to misconfiguration. The reliable, correct setup directly reduces the Mean Time To Resolution (MTTR).</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px;"><strong>Adoption & Business Case</strong></td>
+                                        <td style="padding: 12px;">Removes the primary technical barrier to adoption for ThousandEyes Cloud Insights.</td>
+                                        <td style="padding: 12px;">By making deployment simple and reliable, it encourages greater feature usage across the customer base.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <section>
+                            <h2>3. Prerequisites and Requirements</h2>
+                            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                                <thead>
+                                    <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                                        <th style="padding: 12px; text-align: left;">Requirement</th>
+                                        <th style="padding: 12px; text-align: left;">Description</th>
+                                        <th style="padding: 12px; text-align: left;">Installation Check</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><strong>Bash Shell</strong></td>
+                                        <td style="padding: 12px;">Standard on macOS and most Linux distributions.</td>
+                                        <td style="padding: 12px;"><code>bash --version</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><strong>AWS CLI</strong></td>
+                                        <td style="padding: 12px;">The AWS Command Line Interface must be installed and configured.</td>
+                                        <td style="padding: 12px;"><code>aws --version</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><strong>AWS Profiles</strong></td>
+                                        <td style="padding: 12px;">The AWS CLI configuration file (~/.aws/config or ~/.aws/credentials) must contain the profiles (accounts) you intend to target.</td>
+                                        <td style="padding: 12px;"><code>aws configure list-profiles</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px;"><strong>jq Utility</strong></td>
+                                        <td style="padding: 12px;">A lightweight and flexible command-line JSON processor, essential for parsing policy documents during updates.</td>
+                                        <td style="padding: 12px;"><code>jq --version</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <section>
+                            <h2>4. Script Execution and Usage</h2>
+                            <p>The script is executed using the following syntax:</p>
+                            <pre style="background: var(--bg); padding: 16px; border-radius: 6px; overflow-x: auto; margin: 16px 0;"><code>./ThousandEyes_Cloud_Insights.sh &lt;mode&gt;</code></pre>
+                            
+                            <h3>Modes of Operation</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                                <thead>
+                                    <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                                        <th style="padding: 12px; text-align: left;">Mode Argument</th>
+                                        <th style="padding: 12px; text-align: left;">Intended Action</th>
+                                        <th style="padding: 12px; text-align: left;">Target Resources</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><code>Inventory</code></td>
+                                        <td style="padding: 12px;">Creation Mode: Creates a new IAM Role and an associated Inline Permissions Policy for the Cloud Insights Inventory integration.</td>
+                                        <td style="padding: 12px;">New IAM Role: <code>Role_TE_Inventory_*</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><code>FlowLogs</code></td>
+                                        <td style="padding: 12px;">Creation Mode: Creates the complete infrastructure for Flow Logs delivery and notification.</td>
+                                        <td style="padding: 12px;">New IAM Role: <code>Role_TE_FlowLogs_*</code></td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding: 12px;"><code>InventoryUpdate</code></td>
+                                        <td style="padding: 12px;">Update Mode (Legacy/Simple): Finds and updates Inventory roles based only on the naming convention established during creation.</td>
+                                        <td style="padding: 12px;">Inline Policies attached to roles matching the <code>Role_TE_Inventory_*</code> pattern.</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px;"><code>InventoryUpdateCustom</code></td>
+                                        <td style="padding: 12px;">Remediation/Custom Update Mode: Scans all roles to verify both the ThousandEyes Trust ARN and the presence of a specific permissions policy Sid.</td>
+                                        <td style="padding: 12px;">Both Inline and Attached Managed Policies that match the specified criteria.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <section>
+                            <h2>5. FlowLogs (Creation) Details</h2>
+                            <p>This mode automates the entire FlowLogs data pipeline, which is necessary for ThousandEyes to reliably ingest network data.</p>
+                            
+                            <p>The script performs the following sequence of steps for each selected AWS profile:</p>
+                            <ol style="padding-left: 24px;">
+                                <li><strong>Create IAM Role</strong> (<code>Role_TE_FlowLogs_*</code>) - Provides a secured identity for ThousandEyes to assume and read data.</li>
+                                <li><strong>Create S3 Bucket</strong> (<code>s3-te-*</code>) - Creates the storage location for all VPC Flow Logs.</li>
+                                <li><strong>Create SNS Topic</strong> (<code>Topic_TE_FlowLogs_*</code>) - Creates the notification channel for log delivery alerts.</li>
+                                <li><strong>Configure SNS Policy</strong> - Allows the new S3 bucket to Publish messages and allows the ThousandEyes IAM principal to Subscribe to messages.</li>
+                                <li><strong>Configure S3 Notification</strong> - Instructs the S3 bucket to send a notification to the SNS Topic every time a new log file is created.</li>
+                                <li><strong>Attach Permissions</strong> (<code>Policy_TE_FlowLogs_*</code>) - Creates and attaches a Managed IAM policy to the role, granting read-only access to the S3 bucket.</li>
+                                <li><strong>Create VPC Flow Logs</strong> - Enables Flow Logging on all existing VPCs in the region, pointing them to the new S3 bucket.</li>
+                            </ol>
+                        </section>
+
+                        <section>
+                            <h2>6. AWS Cost Considerations</h2>
+                            <p>In addition to ThousandEyes subscription costs, integrating with AWS may incur charges for:</p>
+                            <ul>
+                                <li><strong>S3 Storage</strong>: Costs associated with storing flow logs in S3 buckets (~$0.023 per GB/month)</li>
+                                <li><strong>SNS Notifications</strong>: Charges for sending notifications via SNS ($0.50 per 1 million requests)</li>
+                                <li><strong>VPC Flow Logs Capture</strong>: $0.50 per GB of flow log data captured</li>
+                                <li><strong>Data Transfer</strong>: Fees for data transfer between AWS services ($0.09 per GB for first 10 TB/month)</li>
+                            </ul>
+                            <p style="margin-top: 16px;"><strong>Note:</strong> For a comprehensive understanding of AWS costs, consult the <a href="https://calculator.aws/#/" target="_blank" style="color: var(--accent);">AWS Pricing Calculator</a>.</p>
+                        </section>
+
+                        <section>
+                            <h2>7. Support</h2>
+                            <p>ThousandEyes CE Support Team - <a href="mailto:support@thousandeyes.com" style="color: var(--accent);">support@thousandeyes.com</a></p>
+                            <p style="margin-top: 16px; font-size: 0.9em; color: var(--muted);"><em>This document is available under preview and subject to change.</em></p>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -703,12 +1041,14 @@
             const navButtons = document.querySelectorAll('.nav-btn');
             const pageEndpoint = document.getElementById('page-endpoint');
             const pageSynthetics = document.getElementById('page-synthetics');
+            const pageFlowcalc = document.getElementById('page-flowcalc');
             let activePage = 'endpoint';
 
             function setPage(page) {
                 activePage = page;
                 pageEndpoint.style.display = page === 'endpoint' ? '' : 'none';
                 pageSynthetics.style.display = page === 'synthetics' ? '' : 'none';
+                pageFlowcalc.style.display = page === 'flowcalc' ? '' : 'none';
                 navButtons.forEach(btn => {
                     const isActive = btn.dataset.page === page;
                     btn.classList.toggle('active', isActive);
@@ -2225,6 +2565,186 @@
             // Initialize
             renderTestTypeParams();
             loadConfigList();
+
+            // Flow Calculator
+            const dailyFlowsEl = document.getElementById('dailyFlows');
+            const flowUnitCostEl = document.getElementById('flowUnitCost');
+            const flowVpcCountEl = document.getElementById('flowVpcCount');
+            const flowTrafficGBEl = document.getElementById('flowTrafficGB');
+            const flowLogRetentionEl = document.getElementById('flowLogRetention');
+            const flowMethodResultEl = document.getElementById('flowMethodResult');
+            const flowFPSResultEl = document.getElementById('flowFPSResult');
+            const flowUnitsResultEl = document.getElementById('flowUnitsResult');
+            const flowMonthlyCostResultEl = document.getElementById('flowMonthlyCostResult');
+            const flowYearlyCostResultEl = document.getElementById('flowYearlyCostResult');
+
+            // AWS Cost Calculator
+            const awsFlowLogGBEl = document.getElementById('awsFlowLogGB');
+            const awsS3StorageGBEl = document.getElementById('awsS3StorageGB');
+            const awsPutRequestsEl = document.getElementById('awsPutRequests');
+            const awsSNSRequestsEl = document.getElementById('awsSNSRequests');
+            const awsDataTransferGBEl = document.getElementById('awsDataTransferGB');
+            const awsFlowLogCostEl = document.getElementById('awsFlowLogCost');
+            const awsS3StorageCostEl = document.getElementById('awsS3StorageCost');
+            const awsPutCostEl = document.getElementById('awsPutCost');
+            const awsSNSCostEl = document.getElementById('awsSNSCost');
+            const awsTransferCostEl = document.getElementById('awsTransferCost');
+            const awsTotalCostEl = document.getElementById('awsTotalCost');
+
+            // AWS Pricing constants (based on standard AWS pricing)
+            const AWS_FLOW_LOG_CAPTURE_PER_GB = 0.50;
+            const AWS_S3_STORAGE_PER_GB = 0.023;
+            const AWS_S3_PUT_PER_1000 = 0.005;
+            const AWS_SNS_PER_MILLION = 0.50;
+            const AWS_DATA_TRANSFER_PER_GB = 0.09;
+
+            function calculateFlowUnits() {
+                if (!dailyFlowsEl || !flowUnitCostEl) return;
+
+                const dailyFlows = parseFloat(dailyFlowsEl.value) || 0;
+                const unitCost = parseFloat(flowUnitCostEl.value) || 0.85;
+                const vpcCount = parseFloat(flowVpcCountEl?.value) || 0;
+                const trafficGB = parseFloat(flowTrafficGBEl?.value) || 0;
+                const retention = parseFloat(flowLogRetentionEl?.value) || 1;
+
+                let units = 0;
+                let fps = 0;
+                let method = '';
+
+                // Use Daily Flow Estimate if daily flows > 0, otherwise use Cloud Size Estimate
+                if (dailyFlows > 0) {
+                    method = 'Daily Flow Estimate';
+                    // Calculate Flows Per Second (FPS)
+                    // Daily flows / (24 hours * 60 minutes * 60 seconds) = daily flows / 86400
+                    fps = dailyFlows / 86400;
+                    
+                    // Calculate units: 240 units per 1000 FPS
+                    // Formula: (FPS / 1000) * 240
+                    units = (fps / 1000) * 240;
+                } else if (vpcCount > 0 && trafficGB > 0) {
+                    method = 'Cloud Size Estimate';
+                    // Flow units calculation: Based on VPCs, traffic volume, and retention
+                    const baseUnits = vpcCount * (trafficGB / 100); // Base units from VPCs and traffic
+                    const retentionMultiplier = 1 + (retention - 1) * 0.1; // Slight increase for retention
+                    units = Math.ceil(baseUnits * retentionMultiplier);
+                } else {
+                    // No valid input
+                    if (flowMethodResultEl) flowMethodResultEl.textContent = '–';
+                    if (flowFPSResultEl) flowFPSResultEl.textContent = '–';
+                    if (flowUnitsResultEl) flowUnitsResultEl.textContent = '–';
+                    if (flowMonthlyCostResultEl) flowMonthlyCostResultEl.textContent = '–';
+                    if (flowYearlyCostResultEl) flowYearlyCostResultEl.textContent = '–';
+                    return;
+                }
+
+                // Calculate costs
+                const monthlyCost = units * unitCost;
+                const yearlyCost = monthlyCost * 12;
+
+                // Update display
+                if (flowMethodResultEl) {
+                    flowMethodResultEl.textContent = method;
+                }
+                if (flowFPSResultEl) {
+                    if (method === 'Daily Flow Estimate') {
+                        flowFPSResultEl.textContent = fps.toFixed(2) + ' FPS';
+                    } else {
+                        flowFPSResultEl.textContent = 'N/A';
+                    }
+                }
+                if (flowUnitsResultEl) {
+                    flowUnitsResultEl.textContent = units.toFixed(2) + ' units';
+                }
+                if (flowMonthlyCostResultEl) {
+                    flowMonthlyCostResultEl.textContent = '$' + monthlyCost.toFixed(2);
+                }
+                if (flowYearlyCostResultEl) {
+                    flowYearlyCostResultEl.textContent = '$' + yearlyCost.toFixed(2);
+                }
+            }
+
+            function calculateAWSCosts() {
+                if (!awsFlowLogGBEl || !awsS3StorageGBEl || !awsPutRequestsEl || 
+                    !awsSNSRequestsEl || !awsDataTransferGBEl) return;
+
+                const flowLogGB = parseFloat(awsFlowLogGBEl.value) || 0;
+                const s3StorageGB = parseFloat(awsS3StorageGBEl.value) || 0;
+                const putRequests = parseFloat(awsPutRequestsEl.value) || 0;
+                const snsRequests = parseFloat(awsSNSRequestsEl.value) || 0;
+                const dataTransferGB = parseFloat(awsDataTransferGBEl.value) || 0;
+
+                // Calculate individual costs
+                const flowLogCost = flowLogGB * AWS_FLOW_LOG_CAPTURE_PER_GB;
+                const s3StorageCost = s3StorageGB * AWS_S3_STORAGE_PER_GB;
+                const putCost = putRequests * AWS_S3_PUT_PER_1000;
+                const snsCost = snsRequests * AWS_SNS_PER_MILLION;
+                const transferCost = dataTransferGB * AWS_DATA_TRANSFER_PER_GB;
+
+                const totalCost = flowLogCost + s3StorageCost + putCost + snsCost + transferCost;
+
+                // Update display
+                if (awsFlowLogCostEl) awsFlowLogCostEl.textContent = '$' + flowLogCost.toFixed(2);
+                if (awsS3StorageCostEl) awsS3StorageCostEl.textContent = '$' + s3StorageCost.toFixed(2);
+                if (awsPutCostEl) awsPutCostEl.textContent = '$' + putCost.toFixed(2);
+                if (awsSNSCostEl) awsSNSCostEl.textContent = '$' + snsCost.toFixed(2);
+                if (awsTransferCostEl) awsTransferCostEl.textContent = '$' + transferCost.toFixed(2);
+                if (awsTotalCostEl) awsTotalCostEl.textContent = '$' + totalCost.toFixed(2);
+            }
+
+            // Add event listeners for flow calculator
+            if (dailyFlowsEl) dailyFlowsEl.addEventListener('input', calculateFlowUnits);
+            if (flowUnitCostEl) flowUnitCostEl.addEventListener('input', calculateFlowUnits);
+            if (flowVpcCountEl) flowVpcCountEl.addEventListener('input', calculateFlowUnits);
+            if (flowTrafficGBEl) flowTrafficGBEl.addEventListener('input', calculateFlowUnits);
+            if (flowLogRetentionEl) flowLogRetentionEl.addEventListener('input', calculateFlowUnits);
+
+            // Add event listeners for AWS cost calculator
+            if (awsFlowLogGBEl) awsFlowLogGBEl.addEventListener('input', calculateAWSCosts);
+            if (awsS3StorageGBEl) awsS3StorageGBEl.addEventListener('input', calculateAWSCosts);
+            if (awsPutRequestsEl) awsPutRequestsEl.addEventListener('input', calculateAWSCosts);
+            if (awsSNSRequestsEl) awsSNSRequestsEl.addEventListener('input', calculateAWSCosts);
+            if (awsDataTransferGBEl) awsDataTransferGBEl.addEventListener('input', calculateAWSCosts);
+
+            // Initialize calculations
+            calculateFlowUnits();
+            calculateAWSCosts();
+
+            // Integration Guide Modal handlers
+            const viewIntegrationGuideBtn = document.getElementById('viewIntegrationGuide');
+            const integrationGuideModal = document.getElementById('integrationGuideModal');
+            const closeIntegrationGuideBtn = document.getElementById('closeIntegrationGuide');
+
+            if (viewIntegrationGuideBtn && integrationGuideModal) {
+                viewIntegrationGuideBtn.addEventListener('click', () => {
+                    integrationGuideModal.style.display = 'block';
+                    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                });
+            }
+
+            if (closeIntegrationGuideBtn && integrationGuideModal) {
+                closeIntegrationGuideBtn.addEventListener('click', () => {
+                    integrationGuideModal.style.display = 'none';
+                    document.body.style.overflow = ''; // Restore scrolling
+                });
+            }
+
+            // Close modal when clicking outside of it
+            if (integrationGuideModal) {
+                integrationGuideModal.addEventListener('click', (e) => {
+                    if (e.target === integrationGuideModal) {
+                        integrationGuideModal.style.display = 'none';
+                        document.body.style.overflow = '';
+                    }
+                });
+            }
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && integrationGuideModal && integrationGuideModal.style.display === 'block') {
+                    integrationGuideModal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            });
         })();
     </script>
 </body>
