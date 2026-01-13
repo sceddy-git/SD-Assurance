@@ -2538,20 +2538,20 @@
                         units = 8 * ((60 / 15) * MONTHLY_DAYS);
                         break;
                     case 'network-agent-server':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        units = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'network-agent-agent':
                         const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
+                        units = 5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
                         break;
                     case 'dns-server':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
+                        units = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
                         break;
                     case 'dns-trace':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        units = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'http-server':
-                        units = ((params.timeout || 5) / 2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'page-load':
                         const pageLoadTimeout = params.pageLoadTimeout || 5;
@@ -2560,7 +2560,9 @@
                         const httpInterval = params.httpInterval || 1;
                         const part1 = pageLoadTimeout / pageLoadInterval;
                         const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
-                        units = (part1 + part2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        // Page Load formula: multiply by 60 mins * 24 hrs * 31 days (44,640 minutes in a month)
+                        const monthlyMinutes = 60 * 24 * 31; // 60 mins * 24 hrs * 31 days
+                        units = (part1 + part2) * monthlyMinutes * (params.numAgents || 1);
                         break;
                     case 'transaction':
                         units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
@@ -2575,8 +2577,18 @@
                         break;
                 }
 
-                // Store base units before applying multiplier
-                const baseUnits = units;
+                // Store base units (this is C - Cloud units, the standard)
+                const cloudUnits = units;
+                
+                // Calculate E (Enterprise units) = C / 2
+                const enterpriseUnits = cloudUnits / 2;
+
+                // Apply agent type multiplier: use Cloud units for cloud, Enterprise units for enterprise
+                if (isCloud) {
+                    units = cloudUnits;
+                } else {
+                    units = enterpriseUnits;
+                }
 
                 // Build calculation breakdown
                 let calcBreakdown = '';
@@ -2588,41 +2600,58 @@
                         calcBreakdown = `C = 8 units * (60 mins * 24 hrs * 31 days) / 15 mins\n`;
                         calcBreakdown += `C = 8 * ((60 / 15) * 24 * 31)\n`;
                         calcBreakdown += `C = 8 * ${((60 / 15) * MONTHLY_DAYS).toFixed(2)}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'network-agent-server':
-                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown = `C = 5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = 5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = 5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'network-agent-agent':
                         const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
                         const twoWayNote = params.twoWay ? ` (two-way: ${params.numAgents || 1} * 2)` : '';
-                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${agentCount} agents${twoWayNote}\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${agentCount}\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${agentCount}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown = `C = 5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${agentCount} agents${twoWayNote}\n`;
+                        calcBreakdown += `C = 5 * ${intervalCalc} * ${agentCount}\n`;
+                        calcBreakdown += `C = 5 * ${intervalValue.toFixed(2)} * ${agentCount}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'dns-server':
-                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents * ${params.numServers || 1} servers\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown = `C = 5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents * ${params.numServers || 1} servers\n`;
+                        calcBreakdown += `C = 5 * ${intervalCalc} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
+                        calcBreakdown += `C = 5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1} * ${params.numServers || 1}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'dns-trace':
-                        calcBreakdown = `C = 2.5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = 2.5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown = `C = 5 units * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = 5 * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = 5 * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'http-server':
                         const timeout = params.timeout || 5;
-                        const timeoutHalf = timeout / 2;
-                        calcBreakdown = `C = (timeout / 2) * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
-                        calcBreakdown += `C = (${timeout} / 2) * ${intervalCalc} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${timeoutHalf} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown = `C = timeout (secs) * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = ${timeout} * ${intervalCalc} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${timeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'page-load':
                         const pageLoadTimeout = params.pageLoadTimeout || 5;
@@ -2631,24 +2660,34 @@
                         const httpInterval = params.httpInterval || 1;
                         const part1 = pageLoadTimeout / pageLoadInterval;
                         const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
-                        calcBreakdown = `C = ((page load timeout / page load interval) + (HTTP timeout * (1/HTTP interval - 1/page load interval))) * (60 mins * 24 hrs * 31 days) / ${interval} mins * agents\n`;
-                        calcBreakdown += `C = ((${pageLoadTimeout} / ${pageLoadInterval}) + (${httpTimeout} * (1/${httpInterval} - 1/${pageLoadInterval}))) * ((60 / ${interval}) * 24 * 31) * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = (${part1.toFixed(2)} + ${part2.toFixed(2)}) * ${((60 / interval) * MONTHLY_DAYS).toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        const monthlyMinutes = 60 * 24 * 31; // 60 mins * 24 hrs * 31 days
+                        calcBreakdown = `C = ((page load timeout (secs) / page load interval (mins)) + (HTTP timeout (secs) * (1 / HTTP interval (mins) - 1 / page load interval (mins)))) * 60 mins * 24 hrs * 31 days * ${params.numAgents || 1} agents\n`;
+                        calcBreakdown += `C = ((${pageLoadTimeout} / ${pageLoadInterval}) + (${httpTimeout} * (1/${httpInterval} - 1/${pageLoadInterval}))) * 60 * 24 * 31 * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = (${part1.toFixed(2)} + ${part2.toFixed(2)}) * ${monthlyMinutes} * ${params.numAgents || 1}\n`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'transaction':
                         const transTimeout = params.timeout || 5;
                         calcBreakdown = `C = timeout * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
                         calcBreakdown += `C = ${transTimeout} * ${intervalCalc} * ${params.numAgents || 1}\n`;
                         calcBreakdown += `C = ${transTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'sip-rtp':
                         const sipRtpTimeout = params.timeout || 5;
                         calcBreakdown = `C = timeout * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
                         calcBreakdown += `C = ${sipRtpTimeout} * ${intervalCalc} * ${params.numAgents || 1}\n`;
                         calcBreakdown += `C = ${sipRtpTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                     case 'voice-calls':
                         const sipTimeout = params.sipTimeout || 5;
@@ -2657,19 +2696,19 @@
                         calcBreakdown = `C = (SIP timeout + RTP timeout) * (60 mins * 24 hrs * 31 days) / ${interval} mins * ${params.numAgents || 1} agents\n`;
                         calcBreakdown += `C = (${sipTimeout} + ${rtpTimeout}) * ${intervalCalc} * ${params.numAgents || 1}\n`;
                         calcBreakdown += `C = ${totalTimeout} * ${intervalValue.toFixed(2)} * ${params.numAgents || 1}\n`;
-                        calcBreakdown += `C = ${baseUnits.toFixed(2)}`;
+                        calcBreakdown += `C = ${cloudUnits.toFixed(2)}\n\n`;
+                        calcBreakdown += `E = C / 2\n`;
+                        calcBreakdown += `E = ${cloudUnits.toFixed(2)} / 2\n`;
+                        calcBreakdown += `E = ${enterpriseUnits.toFixed(2)}`;
                         break;
                 }
 
-                // Apply cloud multiplier
-                units = units * multiplier;
-
-                // Add cloud multiplier to breakdown if needed
+                // Add final result based on agent type
                 if (isCloud) {
-                    calcBreakdown += `\n\nCloud agent multiplier: 2x\n`;
-                    calcBreakdown += `C = ${baseUnits.toFixed(2)} * 2\n`;
+                    calcBreakdown += `\n\nCloud agent selected: C = ${cloudUnits.toFixed(2)} units`;
+                } else {
+                    calcBreakdown += `\n\nEnterprise agent selected: E = ${enterpriseUnits.toFixed(2)} units`;
                 }
-                calcBreakdown += `\nC = ${units.toFixed(2)} units`;
 
                 // Display results
                 unitsResultEl.textContent = Math.round(units).toLocaleString();
@@ -2749,28 +2788,27 @@
 
                 // Calculate units for this config
                 const isCloud = agentType === 'cloud';
-                const multiplier = isCloud ? 2 : 1;
-                let units = 0;
+                let cloudUnits = 0;
 
                 switch(testType) {
                     case 'bgp':
-                        units = 8 * ((60 / 15) * MONTHLY_DAYS);
+                        cloudUnits = 8 * ((60 / 15) * MONTHLY_DAYS);
                         break;
                     case 'network-agent-server':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'network-agent-agent':
                         const agentCount = params.twoWay ? (params.numAgents || 1) * 2 : (params.numAgents || 1);
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
+                        cloudUnits = 5 * ((60 / interval) * MONTHLY_DAYS) * agentCount;
                         break;
                     case 'dns-server':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
+                        cloudUnits = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1) * (params.numServers || 1);
                         break;
                     case 'dns-trace':
-                        units = 2.5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = 5 * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'http-server':
-                        units = ((params.timeout || 5) / 2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'page-load':
                         const pageLoadTimeout = params.pageLoadTimeout || 5;
@@ -2779,21 +2817,26 @@
                         const httpInterval = params.httpInterval || 1;
                         const part1 = pageLoadTimeout / pageLoadInterval;
                         const part2 = httpTimeout * ((1 / httpInterval) - (1 / pageLoadInterval));
-                        units = (part1 + part2) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        // Page Load formula: multiply by 60 mins * 24 hrs * 31 days (44,640 minutes in a month)
+                        const monthlyMinutes = 60 * 24 * 31; // 60 mins * 24 hrs * 31 days
+                        cloudUnits = (part1 + part2) * monthlyMinutes * (params.numAgents || 1);
                         break;
                     case 'transaction':
-                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'sip-rtp':
-                        units = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = (params.timeout || 5) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                     case 'voice-calls':
                         const sipTimeout = params.sipTimeout || 5;
                         const rtpTimeout = params.rtpTimeout || 5;
-                        units = (sipTimeout + rtpTimeout) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
+                        cloudUnits = (sipTimeout + rtpTimeout) * ((60 / interval) * MONTHLY_DAYS) * (params.numAgents || 1);
                         break;
                 }
-                units = units * multiplier;
+                // Calculate E (Enterprise units) = C / 2
+                const enterpriseUnits = cloudUnits / 2;
+                // Apply agent type: use Cloud units for cloud, Enterprise units for enterprise
+                const units = isCloud ? cloudUnits : enterpriseUnits;
 
                 // Divide by 1000 and round up
                 const roundedUnits = Math.ceil(units / 1000);

@@ -34,6 +34,13 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
     - SNS notification costs
     - Data transfer costs
     - Integration guide modal with detailed AWS setup instructions
+- **Cloud and App Synthetics Calculator** – Calculate units for Cloud and App Synthetics tests:
+  - Supports all test types: BGP, Network (Agent-to-Server, Agent-to-Agent), DNS Server, DNS Trace, HTTP Server, Page Load, Transaction, SIP-RTP, Voice Calls
+  - Calculates both Cloud units (C) and Enterprise units (E), where E = C / 2
+  - Configurable test intervals, timeouts, and agent counts
+  - Detailed calculation breakdown showing formulas
+  - Configuration list to track multiple test configurations
+  - Total units and cost calculations across all configurations
 
 ### Live Site
 - Latest build: https://sceddy-git.github.io/SD-Assurance/
