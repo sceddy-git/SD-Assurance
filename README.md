@@ -17,6 +17,8 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
   - Live counts of Advantage vs Essentials agents (simulated in dry-run mode)
 - **EPA Scheduler** – Automate enabling/disabling agents by label:
   - Time-of-day schedules with wrap-around support (e.g., 18:00–08:00)
+  - Organization name and account group fields for each schedule entry
+  - Schedules grouped by organization name with collapsible groups for better organization
   - Adjustable polling frequency and dedicated endpoint path
   - Uses the same API credentials/dry-run toggle as Licensing
   - Shows current instructions and the latest action log

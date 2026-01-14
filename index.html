@@ -1264,8 +1264,8 @@
                 stateEndpoint: '/v6/endpoint-agents/state',
                 schedulerFrequency: 60,
                 schedulerEntries: [
-                    { label: 'EPA-Branch-1', from: '08:00', to: '18:00', action: 'enable' },
-                    { label: 'EPA-Branch-1', from: '18:00', to: '08:00', action: 'disable' }
+                    { orgName: 'Organization 1', accountGroup: 'AG-001', label: 'EPA-Branch-1', from: '08:00', to: '18:00', action: 'enable' },
+                    { orgName: 'Organization 1', accountGroup: 'AG-001', label: 'EPA-Branch-1', from: '18:00', to: '08:00', action: 'disable' }
                 ]
             };
 
@@ -2206,9 +2206,19 @@
             function makeSchedulerEntryRow(entry = {}) {
                 const row = document.createElement('div');
                 row.style.display = 'grid';
-                row.style.gridTemplateColumns = '1.2fr 1fr 1fr 1fr auto';
+                row.style.gridTemplateColumns = '1fr 1fr 1.2fr 1fr 1fr 1fr auto';
                 row.style.gap = '8px';
                 row.className = 'scheduler-row';
+
+                const orgNameEl = document.createElement('input');
+                orgNameEl.type = 'text';
+                orgNameEl.placeholder = 'Org Name';
+                orgNameEl.value = entry.orgName || '';
+
+                const accountGroupEl = document.createElement('input');
+                accountGroupEl.type = 'text';
+                accountGroupEl.placeholder = 'Account Group';
+                accountGroupEl.value = entry.accountGroup || '';
 
                 const labelEl = document.createElement('input');
                 labelEl.type = 'text';
@@ -2249,30 +2259,98 @@
                     resetSchedulerState();
                 });
 
-                [labelEl, fromEl, toEl, actionEl].forEach(el => {
+                [orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl].forEach(el => {
                     el.addEventListener('input', () => { save(); resetSchedulerState(); });
                     el.addEventListener('change', () => { save(); resetSchedulerState(); });
                 });
 
-                row.append(labelEl, fromEl, toEl, actionEl, delBtn);
+                row.append(orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl, delBtn);
                 return row;
             }
 
             function renderSchedulerEntries(entries) {
                 schedulerListEl.innerHTML = '';
-                (entries && entries.length ? entries : []).forEach(entry => {
-                    schedulerListEl.appendChild(makeSchedulerEntryRow(entry));
-                });
-                if (!schedulerListEl.children.length) {
+                const entryList = entries && entries.length ? entries : [];
+                
+                if (!entryList.length) {
                     schedulerListEl.appendChild(makeSchedulerEntryRow());
+                    return;
                 }
+                
+                // Group entries by OrgName
+                const grouped = {};
+                entryList.forEach(entry => {
+                    const orgName = entry.orgName || '(No Org Name)';
+                    if (!grouped[orgName]) {
+                        grouped[orgName] = [];
+                    }
+                    grouped[orgName].push(entry);
+                });
+                
+                // Sort org names for consistent display
+                const sortedOrgNames = Object.keys(grouped).sort();
+                
+                // Render each group with a header
+                sortedOrgNames.forEach((orgName, index) => {
+                    // Create group container
+                    const groupContainer = document.createElement('div');
+                    groupContainer.style.marginTop = index > 0 ? '16px' : '0';
+                    
+                    // Create group header (clickable)
+                    const header = document.createElement('div');
+                    header.style.marginBottom = '8px';
+                    header.style.padding = '8px 0';
+                    header.style.borderBottom = '1px solid var(--border)';
+                    header.style.fontWeight = '600';
+                    header.style.color = 'var(--text)';
+                    header.style.cursor = 'pointer';
+                    header.style.display = 'flex';
+                    header.style.alignItems = 'center';
+                    header.style.gap = '8px';
+                    header.style.userSelect = 'none';
+                    
+                    // Chevron icon (expanded by default)
+                    const chevron = document.createElement('span');
+                    chevron.textContent = '▼';
+                    chevron.style.fontSize = '10px';
+                    chevron.style.transition = 'transform 0.2s';
+                    
+                    const orgNameText = document.createElement('span');
+                    orgNameText.textContent = orgName;
+                    
+                    header.appendChild(chevron);
+                    header.appendChild(orgNameText);
+                    
+                    // Create container for rows
+                    const rowsContainer = document.createElement('div');
+                    rowsContainer.className = 'scheduler-group-rows';
+                    
+                    // Render rows for this group
+                    grouped[orgName].forEach(entry => {
+                        rowsContainer.appendChild(makeSchedulerEntryRow(entry));
+                    });
+                    
+                    // Toggle collapse/expand on header click
+                    header.addEventListener('click', () => {
+                        const isCollapsed = rowsContainer.style.display === 'none';
+                        rowsContainer.style.display = isCollapsed ? '' : 'none';
+                        chevron.textContent = isCollapsed ? '▼' : '▶';
+                        chevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+                    });
+                    
+                    groupContainer.appendChild(header);
+                    groupContainer.appendChild(rowsContainer);
+                    schedulerListEl.appendChild(groupContainer);
+                });
             }
 
             function readSchedulerEntries() {
                 const rows = Array.from(schedulerListEl.querySelectorAll('.scheduler-row'));
                 return rows.map(row => {
-                    const [labelEl, fromEl, toEl, actionEl] = row.querySelectorAll('input, select');
+                    const [orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl] = row.querySelectorAll('input, select');
                     return {
+                        orgName: orgNameEl.value.trim(),
+                        accountGroup: accountGroupEl.value.trim(),
                         label: labelEl.value.trim(),
                         from: fromEl.value.trim(),
                         to: toEl.value.trim(),
