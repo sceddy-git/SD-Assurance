@@ -555,11 +555,6 @@
                 </div>
                 <div class="row">
                     <div class="control">
-                        <label for="stateEndpoint">API Token</label>
-                        <input id="stateEndpoint" name="stateEndpoint" type="password" placeholder="Enter API token">
-                        <div class="hint">POST target that accepts { label, action } with action = enable | disable.</div>
-                    </div>
-                    <div class="control">
                         <label for="schedulerFrequency">Check frequency (seconds)</label>
                         <input id="schedulerFrequency" name="schedulerFrequency" type="number" min="15" step="15" value="60">
                         <div class="hint">How often to evaluate schedules. Minimum 15s.</div>
@@ -703,6 +698,11 @@
                             <div style="text-align:center; padding:40px; color:var(--muted); font-size:14px;">
                                 No configurations added yet. Configure a test above and click "Add to Configuration List".
                             </div>
+                        </div>
+                        <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid var(--border); display: flex; justify-content: flex-end;">
+                            <button id="createCCWEstimate" type="button" style="padding: 12px 24px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                <span>📋</span> Create CCW Estimate
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1051,6 +1051,106 @@
         </div>
     </div>
 
+    <!-- Label Management Modal -->
+    <div id="labelManagementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10001; overflow-y: auto;">
+        <div style="max-width: 700px; margin: 40px auto; background: var(--panel); border-radius: 12px; padding: 32px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); position: relative;">
+            <button id="closeLabelModal" type="button" style="position: absolute; top: 16px; right: 16px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 18px;" title="Close">×</button>
+            
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <span style="font-size: 24px;">🏷️</span>
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: var(--text);">Label Management</h2>
+            </div>
+            <p style="margin: 0 0 24px 36px; color: var(--muted); font-size: 14px;">Create, update and manage scheduled labels.</p>
+            
+            <!-- Tabs -->
+            <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border);">
+                <button id="tabCreateLabel" class="label-modal-tab" style="padding: 12px 20px; border: none; border-bottom: 2px solid var(--accent); background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px; font-weight: 500; border-radius: 0;">Create Label</button>
+                <button id="tabUpdateLabel" class="label-modal-tab" style="padding: 12px 20px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; font-size: 14px; font-weight: 500; border-radius: 0;">Update Label</button>
+            </div>
+            
+            <!-- Create Label Content -->
+            <div id="createLabelContent" class="label-modal-content">
+                <!-- Authentication Section -->
+                <div style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 18px;">🛡️</span>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text);">Authentication</h3>
+                    </div>
+                    <div style="display: grid; gap: 16px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text);">Account ID <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="modalAccountId" placeholder="Enter your account ID" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text);">Token <span style="color: var(--danger);">*</span></label>
+                            <input type="password" id="modalToken" placeholder="Enter your authentication token" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Creation Mode Section -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--text);">Creation Mode</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="creationMode" value="single" checked style="cursor: pointer;">
+                            <span style="color: var(--text); font-size: 14px;">Create single label</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="creationMode" value="multiple" style="cursor: pointer;">
+                            <span style="color: var(--text); font-size: 14px;">Create multiple labels</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Labels Schedule Section -->
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 18px;">📅</span>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text);">Labels Schedule</h3>
+                    </div>
+                    <div id="labelScheduleContainer">
+                        <!-- Label entries will be dynamically added here -->
+                    </div>
+                    <button type="button" id="addAnotherLabel" style="margin-top: 16px; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-size: 14px; display: none;">
+                        <span style="margin-right: 6px;">+</span> Add Another Label
+                    </button>
+                </div>
+                
+                <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" id="cancelCreateLabel" style="padding: 12px 24px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font-size: 14px;">Cancel</button>
+                    <button type="button" id="submitCreateLabel" style="padding: 12px 24px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor: pointer; font-size: 14px; font-weight: 500;">Create Label</button>
+                </div>
+            </div>
+            
+            <!-- Update Label Content -->
+            <div id="updateLabelContent" class="label-modal-content" style="display: none;">
+                <div style="margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                        <span style="font-size: 18px;">🔍</span>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text);">Retrieve Label</h3>
+                    </div>
+                    <div style="display: grid; gap: 16px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text);">Account ID <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="updateAccountId" placeholder="Enter account ID" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text);">Transaction ID <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="updateTransactionId" placeholder="Enter transaction ID" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 32px; display: flex; justify-content: flex-end;">
+                    <button type="button" id="retrieveLabel" style="padding: 12px 24px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                        <span>🔍</span> Retrieve Label
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function() {
             // Page navigation
@@ -1215,7 +1315,6 @@
             const lastCountStatusEl = document.getElementById('lastCountStatus');
             // Scheduler elements
             const schedulerEnabledEl = document.getElementById('schedulerEnabled');
-            const stateEndpointEl = document.getElementById('stateEndpoint');
             const schedulerFrequencyEl = document.getElementById('schedulerFrequency');
             const schedulerListEl = document.getElementById('schedulerList');
             const addSchedulerEntryBtn = document.getElementById('addSchedulerEntry');
@@ -1261,12 +1360,8 @@
                 agentsEndpoint: '/v6/endpoint-agents',
                 dryRun: true,
                 schedulerEnabled: false,
-                stateEndpoint: '/v6/endpoint-agents/state',
                 schedulerFrequency: 60,
-                schedulerEntries: [
-                    { orgName: 'Organization 1', accountGroup: 'AG-001', label: 'EPA-Branch-1', from: '08:00', to: '18:00', action: 'enable' },
-                    { orgName: 'Organization 1', accountGroup: 'AG-001', label: 'EPA-Branch-1', from: '18:00', to: '08:00', action: 'disable' }
-                ]
+                schedulerEntries: []
             };
 
             // Initialize USD base values for tier prices (default tiers are in USD)
@@ -1351,7 +1446,6 @@
                 agentsEndpointEl.value = blended.agentsEndpoint || defaults.agentsEndpoint;
                 dryRunEl.checked = blended.dryRun !== undefined ? !!blended.dryRun : defaults.dryRun;
                 schedulerEnabledEl.checked = blended.schedulerEnabled || false;
-                stateEndpointEl.value = blended.stateEndpoint || defaults.stateEndpoint;
                 schedulerFrequencyEl.value = blended.schedulerFrequency || defaults.schedulerFrequency;
                 renderSchedulerEntries(blended.schedulerEntries || defaults.schedulerEntries);
             } catch {
@@ -1473,7 +1567,6 @@
                     agentsEndpoint: agentsEndpointEl.value,
                     dryRun: !!dryRunEl.checked,
                     schedulerEnabled: !!schedulerEnabledEl.checked,
-                    stateEndpoint: stateEndpointEl.value,
                     schedulerFrequency: schedulerFrequencyEl.value,
                     schedulerEntries: readSchedulerEntries()
                 };
@@ -2137,7 +2230,6 @@
                 switchEndpointEl,
                 agentTagsEl,
                 agentsEndpointEl,
-                stateEndpointEl,
                 schedulerFrequencyEl
             ];
             workflowInputs.forEach(el => {
@@ -2204,67 +2296,91 @@
             }
 
             function makeSchedulerEntryRow(entry = {}) {
+                // Read-only list item
                 const row = document.createElement('div');
                 row.style.display = 'grid';
-                row.style.gridTemplateColumns = '1fr 1fr 1.2fr 1fr 1fr 1fr auto';
+                row.style.gridTemplateColumns = '1fr 1fr 1.2fr 1fr 1fr 1fr auto auto';
                 row.style.gap = '8px';
+                row.style.padding = '12px';
+                row.style.borderBottom = '1px solid var(--border)';
+                row.style.alignItems = 'center';
                 row.className = 'scheduler-row';
 
-                const orgNameEl = document.createElement('input');
-                orgNameEl.type = 'text';
-                orgNameEl.placeholder = 'Org Name';
-                orgNameEl.value = entry.orgName || '';
+                const orgNameEl = document.createElement('div');
+                orgNameEl.textContent = entry.orgName || '-';
+                orgNameEl.style.color = 'var(--text)';
 
-                const accountGroupEl = document.createElement('input');
-                accountGroupEl.type = 'text';
-                accountGroupEl.placeholder = 'Account Group';
-                accountGroupEl.value = entry.accountGroup || '';
+                const accountGroupEl = document.createElement('div');
+                accountGroupEl.textContent = entry.accountGroup || '-';
+                accountGroupEl.style.color = 'var(--text)';
 
-                const labelEl = document.createElement('input');
-                labelEl.type = 'text';
-                labelEl.placeholder = 'Label (case-sensitive)';
-                labelEl.value = entry.label || '';
+                const labelEl = document.createElement('div');
+                labelEl.textContent = entry.label || '-';
+                labelEl.style.color = 'var(--text)';
+                labelEl.style.fontWeight = '500';
 
-                const fromEl = document.createElement('input');
-                fromEl.type = 'text';
-                fromEl.placeholder = 'From HH:MM';
-                fromEl.value = entry.from || '';
+                const fromEl = document.createElement('div');
+                fromEl.textContent = entry.from || '-';
+                fromEl.style.color = 'var(--text)';
 
-                const toEl = document.createElement('input');
-                toEl.type = 'text';
-                toEl.placeholder = 'To HH:MM';
-                toEl.value = entry.to || '';
+                const toEl = document.createElement('div');
+                toEl.textContent = entry.to || '-';
+                toEl.style.color = 'var(--text)';
 
-                const actionEl = document.createElement('select');
-                ['enable', 'disable'].forEach(opt => {
-                    const option = document.createElement('option');
-                    option.value = opt;
-                    option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
-                    actionEl.appendChild(option);
-                });
-                actionEl.value = entry.action || 'enable';
+                const actionEl = document.createElement('div');
+                actionEl.textContent = entry.action ? entry.action.charAt(0).toUpperCase() + entry.action.slice(1) : '-';
+                actionEl.style.color = entry.action === 'enable' ? 'var(--accent-2)' : 'var(--muted)';
+                actionEl.style.fontWeight = '500';
 
-                const delBtn = document.createElement('button');
-                delBtn.type = 'button';
-                delBtn.textContent = 'Remove';
-                delBtn.style.padding = '8px 10px';
-                delBtn.style.borderRadius = '8px';
-                delBtn.style.border = '1px solid var(--border)';
-                delBtn.style.background = '#0f1218';
-                delBtn.style.color = 'var(--text)';
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.textContent = 'Edit';
+                editBtn.style.padding = '6px 12px';
+                editBtn.style.borderRadius = '6px';
+                editBtn.style.border = '1px solid var(--border)';
+                editBtn.style.background = 'var(--panel)';
+                editBtn.style.color = 'var(--text)';
+                editBtn.style.cursor = 'pointer';
+                editBtn.style.fontSize = '13px';
 
-                delBtn.addEventListener('click', () => {
-                    row.remove();
-                    save();
-                    resetSchedulerState();
+                editBtn.addEventListener('click', () => {
+                    openLabelModal('update', entry);
                 });
 
-                [orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl].forEach(el => {
-                    el.addEventListener('input', () => { save(); resetSchedulerState(); });
-                    el.addEventListener('change', () => { save(); resetSchedulerState(); });
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.style.padding = '6px 12px';
+                deleteBtn.style.borderRadius = '6px';
+                deleteBtn.style.border = '1px solid var(--border)';
+                deleteBtn.style.background = 'var(--danger)';
+                deleteBtn.style.color = 'white';
+                deleteBtn.style.cursor = 'pointer';
+                deleteBtn.style.fontSize = '13px';
+
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`Are you sure you want to delete the schedule for label "${entry.label}"?`)) {
+                        const entries = readSchedulerEntries();
+                        const updatedEntries = entries.filter(e => 
+                            !(e.label === entry.label && e.accountGroup === entry.accountGroup && e.from === entry.from && e.to === entry.to)
+                        );
+                        
+                        // Save to localStorage
+                        try {
+                            const data = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                            data.schedulerEntries = updatedEntries;
+                            localStorage.setItem('teBudgetCalc', JSON.stringify(data));
+                        } catch (err) {
+                            console.error('Failed to save entries:', err);
+                        }
+
+                        renderSchedulerEntries(updatedEntries);
+                        save();
+                        resetSchedulerState();
+                    }
                 });
 
-                row.append(orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl, delBtn);
+                row.append(orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl, editBtn, deleteBtn);
                 return row;
             }
 
@@ -2273,9 +2389,31 @@
                 const entryList = entries && entries.length ? entries : [];
                 
                 if (!entryList.length) {
-                    schedulerListEl.appendChild(makeSchedulerEntryRow());
+                    const emptyMsg = document.createElement('div');
+                    emptyMsg.style.padding = '24px';
+                    emptyMsg.style.textAlign = 'center';
+                    emptyMsg.style.color = 'var(--muted)';
+                    emptyMsg.textContent = 'No schedules configured. Click "Add schedule" to create one.';
+                    schedulerListEl.appendChild(emptyMsg);
                     return;
                 }
+                
+                // Add header row for column labels
+                const headerRow = document.createElement('div');
+                headerRow.style.display = 'grid';
+                headerRow.style.gridTemplateColumns = '1fr 1fr 1.2fr 1fr 1fr 1fr auto auto';
+                headerRow.style.gap = '8px';
+                headerRow.style.padding = '12px';
+                headerRow.style.borderBottom = '2px solid var(--border)';
+                headerRow.style.fontWeight = '600';
+                headerRow.style.color = 'var(--muted)';
+                headerRow.style.fontSize = '13px';
+                ['Org Name', 'Account Group', 'Label', 'From', 'To', 'Action', '', ''].forEach(text => {
+                    const cell = document.createElement('div');
+                    cell.textContent = text;
+                    headerRow.appendChild(cell);
+                });
+                schedulerListEl.appendChild(headerRow);
                 
                 // Group entries by OrgName
                 const grouped = {};
@@ -2294,7 +2432,7 @@
                 sortedOrgNames.forEach((orgName, index) => {
                     // Create group container
                     const groupContainer = document.createElement('div');
-                    groupContainer.style.marginTop = index > 0 ? '16px' : '0';
+                    groupContainer.style.marginTop = index > 0 ? '16px' : '8px';
                     
                     // Create group header (clickable)
                     const header = document.createElement('div');
@@ -2345,25 +2483,388 @@
             }
 
             function readSchedulerEntries() {
-                const rows = Array.from(schedulerListEl.querySelectorAll('.scheduler-row'));
-                return rows.map(row => {
-                    const [orgNameEl, accountGroupEl, labelEl, fromEl, toEl, actionEl] = row.querySelectorAll('input, select');
-                    return {
-                        orgName: orgNameEl.value.trim(),
-                        accountGroup: accountGroupEl.value.trim(),
-                        label: labelEl.value.trim(),
-                        from: fromEl.value.trim(),
-                        to: toEl.value.trim(),
-                        action: actionEl.value
-                    };
-                }).filter(e => e.label && e.from && e.to && e.action);
+                // Read from localStorage since the list is now read-only
+                try {
+                    const data = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                    return data.schedulerEntries || [];
+                } catch {
+                    return [];
+                }
+            }
+
+            // ========== Label Management Modal ==========
+            const labelManagementModal = document.getElementById('labelManagementModal');
+            const closeLabelModalBtn = document.getElementById('closeLabelModal');
+            const tabCreateLabel = document.getElementById('tabCreateLabel');
+            const tabUpdateLabel = document.getElementById('tabUpdateLabel');
+            const createLabelContent = document.getElementById('createLabelContent');
+            const updateLabelContent = document.getElementById('updateLabelContent');
+            const labelScheduleContainer = document.getElementById('labelScheduleContainer');
+            const addAnotherLabelBtn = document.getElementById('addAnotherLabel');
+            const submitCreateLabelBtn = document.getElementById('submitCreateLabel');
+            const cancelCreateLabelBtn = document.getElementById('cancelCreateLabel');
+            const retrieveLabelBtn = document.getElementById('retrieveLabel');
+            let currentEditEntry = null;
+            let labelEntryCount = 0;
+
+            function openLabelModal(mode = 'create', entry = null) {
+                if (!labelManagementModal) {
+                    console.error('Label management modal not found');
+                    return;
+                }
+                currentEditEntry = entry;
+                labelManagementModal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                
+                if (mode === 'create') {
+                    switchTab('create');
+                    resetCreateForm();
+                    addLabelEntry(entry || null);
+                } else {
+                    switchTab('update');
+                    if (entry) {
+                        document.getElementById('updateAccountId').value = entry.accountGroup || '';
+                        document.getElementById('updateTransactionId').value = entry.label || '';
+                    }
+                }
+            }
+
+            function closeLabelModal() {
+                if (!labelManagementModal) return;
+                labelManagementModal.style.display = 'none';
+                document.body.style.overflow = '';
+                currentEditEntry = null;
             }
 
             addSchedulerEntryBtn.addEventListener('click', () => {
-                schedulerListEl.appendChild(makeSchedulerEntryRow());
+                openLabelModal('create');
+            });
+
+            function switchTab(tab) {
+                if (!createLabelContent || !updateLabelContent || !tabCreateLabel || !tabUpdateLabel) return;
+                if (tab === 'create') {
+                    createLabelContent.style.display = '';
+                    updateLabelContent.style.display = 'none';
+                    tabCreateLabel.style.borderBottomColor = 'var(--accent)';
+                    tabCreateLabel.style.background = 'var(--panel)';
+                    tabCreateLabel.style.color = 'var(--text)';
+                    tabUpdateLabel.style.borderBottomColor = 'transparent';
+                    tabUpdateLabel.style.background = 'transparent';
+                    tabUpdateLabel.style.color = 'var(--muted)';
+                } else {
+                    createLabelContent.style.display = 'none';
+                    updateLabelContent.style.display = '';
+                    tabUpdateLabel.style.borderBottomColor = 'var(--accent)';
+                    tabUpdateLabel.style.background = 'var(--panel)';
+                    tabUpdateLabel.style.color = 'var(--text)';
+                    tabCreateLabel.style.borderBottomColor = 'transparent';
+                    tabCreateLabel.style.background = 'transparent';
+                    tabCreateLabel.style.color = 'var(--muted)';
+                }
+            }
+
+            function resetCreateForm() {
+                if (!labelScheduleContainer || !addAnotherLabelBtn) return;
+                labelEntryCount = 0;
+                labelScheduleContainer.innerHTML = '';
+                const modalAccountId = document.getElementById('modalAccountId');
+                const modalToken = document.getElementById('modalToken');
+                if (modalAccountId) modalAccountId.value = '';
+                if (modalToken) modalToken.value = '';
+                const singleRadio = document.querySelector('input[name="creationMode"][value="single"]');
+                if (singleRadio) singleRadio.checked = true;
+                addAnotherLabelBtn.style.display = 'none';
+            }
+
+            function addLabelEntry(entry = null) {
+                if (!labelScheduleContainer) return;
+                labelEntryCount++;
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'label-entry';
+                entryDiv.style.marginBottom = '24px';
+                entryDiv.style.padding = '16px';
+                entryDiv.style.border = '1px solid var(--border)';
+                entryDiv.style.borderRadius = '8px';
+                entryDiv.style.background = 'var(--bg)';
+
+                const labelTag = document.createElement('div');
+                labelTag.textContent = `Label ${labelEntryCount}`;
+                labelTag.style.display = 'inline-block';
+                labelTag.style.padding = '4px 8px';
+                labelTag.style.marginBottom = '12px';
+                labelTag.style.background = 'var(--accent)';
+                labelTag.style.color = 'white';
+                labelTag.style.borderRadius = '4px';
+                labelTag.style.fontSize = '12px';
+                labelTag.style.fontWeight = '500';
+
+                const enableLabelDiv = document.createElement('div');
+                enableLabelDiv.style.display = 'flex';
+                enableLabelDiv.style.alignItems = 'center';
+                enableLabelDiv.style.justifyContent = 'space-between';
+                enableLabelDiv.style.marginBottom = '16px';
+
+                const enableLabelLabel = document.createElement('label');
+                enableLabelLabel.textContent = 'Enable Label';
+                enableLabelLabel.style.color = 'var(--text)';
+                enableLabelLabel.style.fontSize = '14px';
+                enableLabelLabel.style.cursor = 'pointer';
+
+                const enableToggle = document.createElement('input');
+                enableToggle.type = 'checkbox';
+                enableToggle.checked = entry ? (entry.action === 'enable') : true;
+                enableToggle.style.cursor = 'pointer';
+                enableToggle.style.width = '40px';
+                enableToggle.style.height = '20px';
+
+                enableLabelLabel.appendChild(enableToggle);
+                enableLabelDiv.appendChild(enableLabelLabel);
+
+                const labelNameInput = document.createElement('input');
+                labelNameInput.type = 'text';
+                labelNameInput.placeholder = 'e.g., Production Label';
+                labelNameInput.value = entry ? (entry.label || '') : '';
+                labelNameInput.required = true;
+                labelNameInput.style.width = '100%';
+                labelNameInput.style.padding = '10px 12px';
+                labelNameInput.style.marginBottom = '16px';
+                labelNameInput.style.borderRadius = '8px';
+                labelNameInput.style.border = '1px solid var(--border)';
+                labelNameInput.style.background = 'var(--panel)';
+                labelNameInput.style.color = 'var(--text)';
+                labelNameInput.style.outline = 'none';
+
+                const labelNameLabel = document.createElement('label');
+                labelNameLabel.textContent = 'Label Name ';
+                labelNameLabel.innerHTML += '<span style="color: var(--danger);">*</span>';
+                labelNameLabel.style.display = 'block';
+                labelNameLabel.style.marginBottom = '6px';
+                labelNameLabel.style.fontSize = '13px';
+                labelNameLabel.style.color = 'var(--text)';
+
+                const scheduleDatesDiv = document.createElement('div');
+                scheduleDatesDiv.style.display = 'grid';
+                scheduleDatesDiv.style.gridTemplateColumns = '1fr 1fr';
+                scheduleDatesDiv.style.gap = '16px';
+
+                const fromDiv = document.createElement('div');
+                const fromLabel = document.createElement('label');
+                fromLabel.textContent = 'From ';
+                fromLabel.innerHTML += '<span style="color: var(--danger);">*</span>';
+                fromLabel.style.display = 'block';
+                fromLabel.style.marginBottom = '6px';
+                fromLabel.style.fontSize = '13px';
+                fromLabel.style.color = 'var(--text)';
+
+                const fromInput = document.createElement('input');
+                fromInput.type = 'time';
+                fromInput.value = entry ? (entry.from || '') : '';
+                fromInput.required = true;
+                fromInput.style.width = '100%';
+                fromInput.style.padding = '10px 12px';
+                fromInput.style.borderRadius = '8px';
+                fromInput.style.border = '1px solid var(--border)';
+                fromInput.style.background = 'var(--panel)';
+                fromInput.style.color = 'var(--text)';
+                fromInput.style.outline = 'none';
+
+                fromDiv.appendChild(fromLabel);
+                fromDiv.appendChild(fromInput);
+
+                const toDiv = document.createElement('div');
+                const toLabel = document.createElement('label');
+                toLabel.textContent = 'To ';
+                toLabel.innerHTML += '<span style="color: var(--danger);">*</span>';
+                toLabel.style.display = 'block';
+                toLabel.style.marginBottom = '6px';
+                toLabel.style.fontSize = '13px';
+                toLabel.style.color = 'var(--text)';
+
+                const toInput = document.createElement('input');
+                toInput.type = 'time';
+                toInput.value = entry ? (entry.to || '') : '';
+                toInput.required = true;
+                toInput.style.width = '100%';
+                toInput.style.padding = '10px 12px';
+                toInput.style.borderRadius = '8px';
+                toInput.style.border = '1px solid var(--border)';
+                toInput.style.background = 'var(--panel)';
+                toInput.style.color = 'var(--text)';
+                toInput.style.outline = 'none';
+
+                toDiv.appendChild(toLabel);
+                toDiv.appendChild(toInput);
+
+                scheduleDatesDiv.appendChild(fromDiv);
+                scheduleDatesDiv.appendChild(toDiv);
+
+                entryDiv.appendChild(labelTag);
+                entryDiv.appendChild(enableLabelDiv);
+                entryDiv.appendChild(labelNameLabel);
+                entryDiv.appendChild(labelNameInput);
+                entryDiv.appendChild(scheduleDatesDiv);
+
+                labelScheduleContainer.appendChild(entryDiv);
+            }
+
+            if (tabCreateLabel) {
+                tabCreateLabel.addEventListener('click', () => switchTab('create'));
+            }
+            if (tabUpdateLabel) {
+                tabUpdateLabel.addEventListener('click', () => switchTab('update'));
+            }
+            if (closeLabelModalBtn) {
+                closeLabelModalBtn.addEventListener('click', closeLabelModal);
+            }
+            if (cancelCreateLabelBtn) {
+                cancelCreateLabelBtn.addEventListener('click', closeLabelModal);
+            }
+
+            // Close modal when clicking outside
+            if (labelManagementModal) {
+                labelManagementModal.addEventListener('click', (e) => {
+                    if (e.target === labelManagementModal) {
+                        closeLabelModal();
+                    }
+                });
+            }
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && labelManagementModal.style.display === 'block') {
+                    closeLabelModal();
+                }
+            });
+
+            // Handle creation mode change
+            document.querySelectorAll('input[name="creationMode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (addAnotherLabelBtn) {
+                        addAnotherLabelBtn.style.display = e.target.value === 'multiple' ? 'block' : 'none';
+                    }
+                });
+            });
+
+            if (addAnotherLabelBtn) {
+                addAnotherLabelBtn.addEventListener('click', () => {
+                    addLabelEntry();
+                });
+            }
+
+            if (submitCreateLabelBtn) {
+                submitCreateLabelBtn.addEventListener('click', async () => {
+                const accountId = document.getElementById('modalAccountId').value.trim();
+                const token = document.getElementById('modalToken').value.trim();
+                
+                if (!accountId || !token) {
+                    alert('Please fill in Account ID and Token');
+                    return;
+                }
+
+                // Fetch Org Name from API using Account Group ID
+                let orgName = accountId; // Default to accountId if API call fails
+                try {
+                    const base = (apiBaseEl.value || '').replace(/\/$/, '');
+                    if (base && token) {
+                        const orgUrl = `${base}/v7/account-groups/${accountId}`;
+                        const orgResp = await fetch(orgUrl, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        if (orgResp.ok) {
+                            const orgData = await orgResp.json();
+                            orgName = orgData.accountGroup?.name || orgData.name || accountId;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Could not fetch org name, using account ID:', err);
+                    orgName = accountId;
+                }
+
+                const entries = Array.from(labelScheduleContainer.querySelectorAll('.label-entry'));
+                const newEntries = [];
+
+                entries.forEach(entryDiv => {
+                    const labelInput = entryDiv.querySelector('input[type="text"]');
+                    const enableToggle = entryDiv.querySelector('input[type="checkbox"]');
+                    const fromInput = entryDiv.querySelectorAll('input[type="time"]')[0];
+                    const toInput = entryDiv.querySelectorAll('input[type="time"]')[1];
+
+                    const label = labelInput.value.trim();
+                    const from = fromInput.value;
+                    const to = toInput.value;
+
+                    if (label && from && to) {
+                        newEntries.push({
+                            orgName: orgName,
+                            accountGroup: accountId,
+                            label: label,
+                            from: from,
+                            to: to,
+                            action: enableToggle.checked ? 'enable' : 'disable',
+                            token: token
+                        });
+                    }
+                });
+
+                if (newEntries.length === 0) {
+                    alert('Please fill in at least one valid label entry');
+                    return;
+                }
+
+                // Get existing entries and add new ones
+                const existingEntries = readSchedulerEntries();
+                const updatedEntries = currentEditEntry 
+                    ? existingEntries.map(e => e.label === currentEditEntry.label ? newEntries[0] : e)
+                    : [...existingEntries, ...newEntries];
+
+                // Save to localStorage
+                try {
+                    const data = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                    data.schedulerEntries = updatedEntries;
+                    localStorage.setItem('teBudgetCalc', JSON.stringify(data));
+                } catch (err) {
+                    console.error('Failed to save entries:', err);
+                }
+
+                renderSchedulerEntries(updatedEntries);
                 save();
                 resetSchedulerState();
-            });
+                closeLabelModal();
+                });
+            }
+
+            if (retrieveLabelBtn) {
+                retrieveLabelBtn.addEventListener('click', () => {
+                const accountId = document.getElementById('updateAccountId').value.trim();
+                const transactionId = document.getElementById('updateTransactionId').value.trim();
+                
+                if (!accountId || !transactionId) {
+                    alert('Please fill in Account ID and Transaction ID');
+                    return;
+                }
+
+                // Find the entry by label (using transactionId as label identifier)
+                const entries = readSchedulerEntries();
+                const entry = entries.find(e => e.label === transactionId || e.accountGroup === accountId);
+                
+                if (entry) {
+                    switchTab('create');
+                    resetCreateForm();
+                    addLabelEntry(entry);
+                    document.getElementById('modalAccountId').value = entry.accountGroup || accountId;
+                    document.getElementById('modalToken').value = ''; // Don't auto-fill token
+                } else {
+                    alert('Label not found');
+                }
+                });
+            }
+
+            // Initialize create form with one entry
+            if (labelScheduleContainer) {
+                // This will be called when modal opens
+            }
 
             function getSchedulerFrequencyMs() {
                 const freq = Number(schedulerFrequencyEl.value);
@@ -2406,20 +2907,20 @@
                 schedulerSnapshotEl.textContent = '–';
             }
 
-            async function updateEndpointState(label, action) {
+            async function updateEndpointState(label, action, token, accountGroupId, orgName) {
                 if (dryRunEl.checked) {
                     await new Promise(resolve => setTimeout(resolve, 150));
                     return { dryRun: true, label, action };
                 }
                 const base = (apiBaseEl.value || '').replace(/\/$/, '');
-                const path = stateEndpointEl.value || '';
-                const token = apiTokenEl.value.trim();
+                const path = '/v6/endpoint-agents/state';
                 if (!base || !path || !token) throw new Error('Missing API configuration');
                 const url = base + path;
                 const body = {
                     label,
                     action,
-                    accountGroupId: accountGroupIdEl.value || undefined
+                    accountGroupId: accountGroupId || undefined,
+                    orgName: orgName || undefined
                 };
                 const resp = await fetch(url, {
                     method: 'POST',
@@ -2459,8 +2960,16 @@
                         const action = instructions[label];
                         if (!action) continue;
                         if (lastSchedulerActions.get(label) === action) continue;
+                        
+                        // Find the entry for this label to get token and accountGroupId
+                        const entry = entries.find(e => e.label === label && e.action === action);
+                        if (!entry || !entry.token) {
+                            logScheduler(`Skipping ${label}: missing token`);
+                            continue;
+                        }
+                        
                         try {
-                            await updateEndpointState(label, action);
+                            await updateEndpointState(label, action, entry.token, entry.accountGroup, entry.orgName);
                             lastSchedulerActions.set(label, action);
                             logScheduler(`Set ${label} → ${action} at ${new Date().toLocaleTimeString()}`);
                         } catch (err) {
@@ -2488,10 +2997,6 @@
                 restartSchedulerTimer();
             });
 
-            stateEndpointEl.addEventListener('change', () => {
-                save();
-                resetSchedulerState();
-            });
 
             restartSchedulerTimer();
             runScheduler();
@@ -3078,6 +3583,40 @@
                 }
             });
 
+            // Create CCW Estimate button
+            const createCCWEstimateBtn = document.getElementById('createCCWEstimate');
+            if (createCCWEstimateBtn) {
+                createCCWEstimateBtn.addEventListener('click', () => {
+                    // Mockup: Show alert with Bill of Materials summary, then open CCW
+                    const contractMonths = parseInt(contractDurationEl.value) || 12;
+                    const contractYears = contractMonths / 12;
+                    
+                    let totalOriginalUnits = 0;
+                    let totalCost = 0;
+                    configList.forEach(config => {
+                        const monthlyCost = config.units * UNIT_COST;
+                        const totalCostForConfig = monthlyCost * contractMonths;
+                        totalOriginalUnits += (config.originalUnits || config.units * 1000);
+                        totalCost += totalCostForConfig;
+                    });
+                    
+                    const totalRoundedUnits = Math.ceil(totalOriginalUnits / 1000);
+                    
+                    const bomSummary = `Bill of Materials Summary:\n\n` +
+                        `Total Configurations: ${configList.length}\n` +
+                        `Total Units (×1000): ${totalRoundedUnits.toLocaleString()}\n` +
+                        `Contract Duration: ${contractYears} Year${contractYears > 1 ? 's' : ''}\n` +
+                        `Total Cost: ${formatCurrency(totalCost)}\n\n` +
+                        `Opening CCW (Cisco Commerce Workspace)...`;
+                    
+                    // Show summary alert (mockup)
+                    alert(bomSummary);
+                    
+                    // Open CCW in new tab
+                    window.open('http://cisco.com/go/ccw', '_blank');
+                });
+            }
+
             // Update cost when contract duration changes
             contractDurationEl.addEventListener('change', () => {
                 renderConfigList();
@@ -3275,6 +3814,9 @@
             });
         })();
     </script>
+
+    <!-- Jotform Chatbot Integration -->
+    <script src='https://cdn.jotfor.ms/agent/embedjs/0195f27e6f707272a077e5c889a970d6564e/embed.js'></script>
 </body>
 </html>
 
