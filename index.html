@@ -310,6 +310,17 @@
             <button class="nav-btn" data-page="synthetics">Cloud and App Synthetics</button>
             <button class="nav-btn" data-page="flowcalc">Cloud and Traffic Insight Flow Calculator</button>
         </nav>
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+            <label style="font-size: 12px; color: var(--muted); margin-bottom: 8px; display: block;">Currency</label>
+            <select id="unifiedCurrency" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 13px; cursor: pointer;">
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="JPY">JPY - Japanese Yen</option>
+                <option value="AUD">AUD - Australian Dollar</option>
+                <option value="MXN">MXN - Mexican Peso</option>
+            </select>
+            <button id="unifiedFetchRates" type="button" style="margin-top: 8px; width: 100%; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 11px; cursor: pointer;">Update Rates</button>
+        </div>
     </aside>
     <div class="main-content">
         <div id="page-endpoint" class="page-content">
@@ -396,18 +407,7 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="control">
-                        <label for="currency">Currency</label>
-                        <select id="currency" name="currency" aria-describedby="curHint">
-                            <option value="USD">USD - US Dollar</option>
-                            <option value="EUR">EUR - Euro (Europe)</option>
-                            <option value="JPY">JPY - Japanese Yen</option>
-                            <option value="AUD">AUD - Australian Dollar</option>
-                            <option value="MXN">MXN - Mexican Peso</option>
-                        </select>
-                        <div class="hint" id="curHint">Select currency for price formatting. <button id="fetchRates" type="button" style="margin-top:4px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--panel); color:var(--text); font-size:11px;">Update exchange rates</button></div>
-                    </div>
+                <div class="row-1">
                     <div class="control">
                         <label for="rounding">Rounding</label>
                         <input id="rounding" name="rounding" type="text" value="down" aria-describedby="roundHint">
@@ -736,9 +736,9 @@
                                 <div class="hint">Total number of flows per day</div>
                             </div>
                             <div class="control">
-                                <label for="flowUnitCost">Unit Cost ($/unit/month)</label>
+                                <label for="flowUnitCost">Unit Cost (USD/unit/month)</label>
                                 <input id="flowUnitCost" type="number" min="0" value="0.85" step="0.01">
-                                <div class="hint">Cost per unit per month</div>
+                                <div class="hint">Base cost per unit per month in USD (converted to selected currency for display)</div>
                             </div>
                         </div>
 
@@ -1262,13 +1262,18 @@
             
             initTheme();
             
+            // Unified currency selector (used across all pages)
+            const unifiedCurrencyEl = document.getElementById('unifiedCurrency');
+            const unifiedFetchRatesBtn = document.getElementById('unifiedFetchRates');
+            // For backward compatibility, alias currencyEl to unifiedCurrencyEl
+            const currencyEl = unifiedCurrencyEl;
+            const fetchRatesBtn = unifiedFetchRatesBtn;
+            
             const budgetEl = document.getElementById('budget');
             const priceAdvEl = document.getElementById('priceAdv');
             const priceEssEl = document.getElementById('priceEss');
-            const currencyEl = document.getElementById('currency');
             const roundingEl = document.getElementById('rounding');
             const showAvgEl = document.getElementById('showAvg');
-            const fetchRatesBtn = document.getElementById('fetchRates');
             const ratesDisplayEl = document.getElementById('ratesDisplay');
             const resRates = document.getElementById('res-rates');
 
@@ -2134,8 +2139,10 @@
                     }
                 } catch {}
 
-                fetchRatesBtn.textContent = 'Updating...';
-                fetchRatesBtn.disabled = true;
+                if (fetchRatesBtn) {
+                    fetchRatesBtn.textContent = 'Updating...';
+                    fetchRatesBtn.disabled = true;
+                }
                 
                 try {
                     // Using exchangerate-api.io free tier (no API key needed for basic usage)
@@ -2154,15 +2161,21 @@
                     
                     displayRates(rates, baseCurrency);
                     // Trigger recompute to update multi-currency display
-                    if (showMultiCurrencyEl.checked) {
+                    if (showMultiCurrencyEl && showMultiCurrencyEl.checked) {
                         compute();
+                    }
+                    // Update synthetics calculator costs
+                    if (typeof renderConfigList === 'function') {
+                        renderConfigList();
                     }
                 } catch (err) {
                     ratesDisplayEl.textContent = 'Error: ' + (err.message || 'Failed to fetch rates');
                     resRates.style.display = '';
                 } finally {
-                    fetchRatesBtn.textContent = 'Update exchange rates';
-                    fetchRatesBtn.disabled = false;
+                    if (fetchRatesBtn) {
+                        fetchRatesBtn.textContent = 'Update Rates';
+                        fetchRatesBtn.disabled = false;
+                    }
                 }
             }
 
@@ -2184,35 +2197,88 @@
                 }
             }
 
-            fetchRatesBtn.addEventListener('click', fetchExchangeRates);
+            if (fetchRatesBtn) {
+                fetchRatesBtn.addEventListener('click', fetchExchangeRates);
+            }
             
-            // Refresh rates when currency changes
-            currencyEl.addEventListener('change', () => {
-                const baseCurrency = (currencyEl.value || 'USD').toUpperCase();
-                // Update header currency tag immediately
-                currencyTagValue.textContent = baseCurrency;
+            // Unified currency change handler (updates all pages)
+            function updateUnifiedCurrency() {
+                if (!unifiedCurrencyEl) return;
+                const baseCurrency = (unifiedCurrencyEl.value || 'USD').toUpperCase();
+                
+                // Update all currency tags
+                if (currencyTagValue) currencyTagValue.textContent = baseCurrency;
+                if (syntheticsCurrencyTagValue) syntheticsCurrencyTagValue.textContent = baseCurrency;
+                
+                // Save currency preference
+                try {
+                    const saved = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                    saved.currency = unifiedCurrencyEl.value;
+                    saved.syntheticsCurrency = unifiedCurrencyEl.value;
+                    localStorage.setItem('teBudgetCalc', JSON.stringify(saved));
+                } catch {}
+                
+                // Update EPA calculator
                 compute();
+                
+                // Update synthetics calculator
+                if (typeof renderConfigList === 'function') {
+                    renderConfigList();
+                }
+                
+                // Update flow calculator
+                if (typeof calculateFlowUnits === 'function') {
+                    calculateFlowUnits();
+                }
+                if (typeof calculateAWSCosts === 'function') {
+                    calculateAWSCosts();
+                }
+                
                 // Try to load cached rates for new currency, or fetch if not available
                 const CACHE_KEY = `teExchangeRates_${baseCurrency}`;
                 try {
                     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
                     if (cached.rates && cached.timestamp && (Date.now() - cached.timestamp < 60 * 60 * 1000)) {
-                        displayRates(cached.rates, baseCurrency);
+                        if (typeof displayRates === 'function') {
+                            displayRates(cached.rates, baseCurrency);
+                        }
                     } else {
                         // Cache expired or doesn't exist, fetch new rates
-                        fetchExchangeRates();
+                        if (typeof fetchExchangeRates === 'function') {
+                            fetchExchangeRates();
+                        }
                     }
                 } catch {
-                    fetchExchangeRates();
+                    if (typeof fetchExchangeRates === 'function') {
+                        fetchExchangeRates();
+                    }
                 }
-            });
+            }
             
-            // Load cached rates on page load
+            if (unifiedCurrencyEl) {
+                unifiedCurrencyEl.addEventListener('change', updateUnifiedCurrency);
+            }
+            
+            // Legacy handler for backward compatibility
+            if (currencyEl) {
+                currencyEl.addEventListener('change', updateUnifiedCurrency);
+            }
+            
+            // Initialize unified currency from localStorage on page load
             try {
-                const baseCurrency = (currencyEl.value || 'USD').toUpperCase();
+                const saved = JSON.parse(localStorage.getItem('teBudgetCalc') || '{}');
+                const savedCurrency = saved.currency || saved.syntheticsCurrency || 'USD';
+                if (unifiedCurrencyEl) {
+                    unifiedCurrencyEl.value = savedCurrency;
+                    updateUnifiedCurrency();
+                }
+                // Load cached rates on page load
+                const baseCurrency = savedCurrency.toUpperCase();
                 const CACHE_KEY = `teExchangeRates_${baseCurrency}`;
                 const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-                if (cached.rates) displayRates(cached.rates, baseCurrency);
+                if (cached.rates && typeof displayRates === 'function') {
+                    displayRates(cached.rates, baseCurrency);
+                }
             } catch {}
 
             function getTagList() {
@@ -3306,8 +3372,29 @@
             const totalUnitsDisplayEl = document.getElementById('totalUnitsDisplay');
             const totalCostDisplayEl = document.getElementById('totalCostDisplay');
             const contractDurationEl = document.getElementById('contractDuration');
-            const UNIT_COST = 0.85; // Cost per unit per month
+            // Use unified currency selector for synthetics
+            const syntheticsCurrencyEl = unifiedCurrencyEl;
+            const syntheticsCurrencyTagValue = document.getElementById('syntheticsCurrencyTagValue');
+            const syntheticsFetchRatesBtn = unifiedFetchRatesBtn;
+            const UNIT_COST_USD = 0.85; // Cost per unit per month in USD
             let configList = [];
+            
+            // Get current unit cost based on selected currency
+            function getUnitCost() {
+                const currency = (syntheticsCurrencyEl?.value || 'USD').toUpperCase();
+                if (currency === 'USD') {
+                    return UNIT_COST_USD;
+                }
+                // Try to get exchange rate from cache
+                try {
+                    const CACHE_KEY = `teExchangeRates_USD`;
+                    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                    if (cached.rates && cached.rates[currency]) {
+                        return UNIT_COST_USD * cached.rates[currency];
+                    }
+                } catch {}
+                return UNIT_COST_USD; // Fallback to USD if no rate available
+            }
 
             // Load saved configurations
             function loadConfigList() {
@@ -3478,9 +3565,10 @@
 
             // Format currency
             function formatCurrency(amount) {
+                const currency = (syntheticsCurrencyEl?.value || 'USD').toUpperCase();
                 return new Intl.NumberFormat('en-US', {
                     style: 'currency',
-                    currency: 'USD',
+                    currency: currency,
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 }).format(amount);
@@ -3520,10 +3608,11 @@
                 const contractYears = contractMonths / 12;
                 
                 // Sum original units, then divide by 1000 and round up
+                const unitCost = getUnitCost();
                 let totalOriginalUnits = 0;
                 let totalCost = 0;
                 configList.forEach((config, index) => {
-                    const monthlyCost = config.units * UNIT_COST;
+                    const monthlyCost = config.units * unitCost;
                     const totalCostForConfig = monthlyCost * contractMonths;
                     // Sum original units for total calculation
                     totalOriginalUnits += (config.originalUnits || config.units * 1000);
@@ -3591,10 +3680,11 @@
                     const contractMonths = parseInt(contractDurationEl.value) || 12;
                     const contractYears = contractMonths / 12;
                     
+                    const unitCost = getUnitCost();
                     let totalOriginalUnits = 0;
                     let totalCost = 0;
                     configList.forEach(config => {
-                        const monthlyCost = config.units * UNIT_COST;
+                        const monthlyCost = config.units * unitCost;
                         const totalCostForConfig = monthlyCost * contractMonths;
                         totalOriginalUnits += (config.originalUnits || config.units * 1000);
                         totalCost += totalCostForConfig;
@@ -3621,6 +3711,10 @@
             contractDurationEl.addEventListener('change', () => {
                 renderConfigList();
             });
+
+            // Exchange rates and currency changes are handled by the unified handlers above
+
+            // Currency is initialized by the unified handler below
 
             // Event listeners
             agentTypeEl.addEventListener('change', calculateSynthetics);
@@ -3665,11 +3759,40 @@
             const AWS_SNS_PER_MILLION = 0.50;
             const AWS_DATA_TRANSFER_PER_GB = 0.09;
 
+            // Format currency for flow calculator
+            function formatFlowCurrency(amount) {
+                const currency = (unifiedCurrencyEl?.value || 'USD').toUpperCase();
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: currency,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(amount);
+            }
+
+            // Get flow unit cost in selected currency
+            function getFlowUnitCost() {
+                const baseUnitCost = parseFloat(flowUnitCostEl?.value) || 0.85; // Base cost in USD
+                const currency = (unifiedCurrencyEl?.value || 'USD').toUpperCase();
+                if (currency === 'USD') {
+                    return baseUnitCost;
+                }
+                // Try to get exchange rate from cache
+                try {
+                    const CACHE_KEY = `teExchangeRates_USD`;
+                    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                    if (cached.rates && cached.rates[currency]) {
+                        return baseUnitCost * cached.rates[currency];
+                    }
+                } catch {}
+                return baseUnitCost; // Fallback to USD if no rate available
+            }
+
             function calculateFlowUnits() {
                 if (!dailyFlowsEl || !flowUnitCostEl) return;
 
                 const dailyFlows = parseFloat(dailyFlowsEl.value) || 0;
-                const unitCost = parseFloat(flowUnitCostEl.value) || 0.85;
+                const unitCost = getFlowUnitCost();
                 const vpcCount = parseFloat(flowVpcCountEl?.value) || 0;
                 const trafficGB = parseFloat(flowTrafficGBEl?.value) || 0;
                 const retention = parseFloat(flowLogRetentionEl?.value) || 1;
@@ -3723,11 +3846,28 @@
                     flowUnitsResultEl.textContent = units.toFixed(2) + ' units';
                 }
                 if (flowMonthlyCostResultEl) {
-                    flowMonthlyCostResultEl.textContent = '$' + monthlyCost.toFixed(2);
+                    flowMonthlyCostResultEl.textContent = formatFlowCurrency(monthlyCost);
                 }
                 if (flowYearlyCostResultEl) {
-                    flowYearlyCostResultEl.textContent = '$' + yearlyCost.toFixed(2);
+                    flowYearlyCostResultEl.textContent = formatFlowCurrency(yearlyCost);
                 }
+            }
+
+            // Get AWS costs in selected currency
+            function getAWSCostInCurrency(usdAmount) {
+                const currency = (unifiedCurrencyEl?.value || 'USD').toUpperCase();
+                if (currency === 'USD') {
+                    return usdAmount;
+                }
+                // Try to get exchange rate from cache
+                try {
+                    const CACHE_KEY = `teExchangeRates_USD`;
+                    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+                    if (cached.rates && cached.rates[currency]) {
+                        return usdAmount * cached.rates[currency];
+                    }
+                } catch {}
+                return usdAmount; // Fallback to USD if no rate available
             }
 
             function calculateAWSCosts() {
@@ -3740,22 +3880,30 @@
                 const snsRequests = parseFloat(awsSNSRequestsEl.value) || 0;
                 const dataTransferGB = parseFloat(awsDataTransferGBEl.value) || 0;
 
-                // Calculate individual costs
-                const flowLogCost = flowLogGB * AWS_FLOW_LOG_CAPTURE_PER_GB;
-                const s3StorageCost = s3StorageGB * AWS_S3_STORAGE_PER_GB;
-                const putCost = putRequests * AWS_S3_PUT_PER_1000;
-                const snsCost = snsRequests * AWS_SNS_PER_MILLION;
-                const transferCost = dataTransferGB * AWS_DATA_TRANSFER_PER_GB;
+                // Calculate individual costs in USD
+                const flowLogCostUSD = flowLogGB * AWS_FLOW_LOG_CAPTURE_PER_GB;
+                const s3StorageCostUSD = s3StorageGB * AWS_S3_STORAGE_PER_GB;
+                const putCostUSD = putRequests * AWS_S3_PUT_PER_1000;
+                const snsCostUSD = snsRequests * AWS_SNS_PER_MILLION;
+                const transferCostUSD = dataTransferGB * AWS_DATA_TRANSFER_PER_GB;
 
-                const totalCost = flowLogCost + s3StorageCost + putCost + snsCost + transferCost;
+                const totalCostUSD = flowLogCostUSD + s3StorageCostUSD + putCostUSD + snsCostUSD + transferCostUSD;
+
+                // Convert to selected currency
+                const flowLogCost = getAWSCostInCurrency(flowLogCostUSD);
+                const s3StorageCost = getAWSCostInCurrency(s3StorageCostUSD);
+                const putCost = getAWSCostInCurrency(putCostUSD);
+                const snsCost = getAWSCostInCurrency(snsCostUSD);
+                const transferCost = getAWSCostInCurrency(transferCostUSD);
+                const totalCost = getAWSCostInCurrency(totalCostUSD);
 
                 // Update display
-                if (awsFlowLogCostEl) awsFlowLogCostEl.textContent = '$' + flowLogCost.toFixed(2);
-                if (awsS3StorageCostEl) awsS3StorageCostEl.textContent = '$' + s3StorageCost.toFixed(2);
-                if (awsPutCostEl) awsPutCostEl.textContent = '$' + putCost.toFixed(2);
-                if (awsSNSCostEl) awsSNSCostEl.textContent = '$' + snsCost.toFixed(2);
-                if (awsTransferCostEl) awsTransferCostEl.textContent = '$' + transferCost.toFixed(2);
-                if (awsTotalCostEl) awsTotalCostEl.textContent = '$' + totalCost.toFixed(2);
+                if (awsFlowLogCostEl) awsFlowLogCostEl.textContent = formatFlowCurrency(flowLogCost);
+                if (awsS3StorageCostEl) awsS3StorageCostEl.textContent = formatFlowCurrency(s3StorageCost);
+                if (awsPutCostEl) awsPutCostEl.textContent = formatFlowCurrency(putCost);
+                if (awsSNSCostEl) awsSNSCostEl.textContent = formatFlowCurrency(snsCost);
+                if (awsTransferCostEl) awsTransferCostEl.textContent = formatFlowCurrency(transferCost);
+                if (awsTotalCostEl) awsTotalCostEl.textContent = formatFlowCurrency(totalCost);
             }
 
             // Add event listeners for flow calculator
