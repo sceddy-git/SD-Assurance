@@ -7,29 +7,31 @@
     <style>
         :root {
             color-scheme: light dark;
-            --bg: #0b0c10;
-            --panel: #15161a;
-            --text: #e8ecef;
-            --muted: #9aa4ad;
-            --accent: #2ea8ff;
+            /* Dark Mode: ThousandEyes Dark Blue Theme */
+            --bg: #0d1b2a;
+            --panel: #1b263b;
+            --text: #e0e1dd;
+            --muted: #778da9;
+            --accent: #0080ff;
             --accent-2: #7bd389;
-            --border: #24262c;
+            --border: #415a77;
             --danger: #ef476f;
         }
 
         :root[data-theme="light"] {
-            --bg: #f5f7fa;
+            /* Light Mode: ThousandEyes Light Orange Theme */
+            --bg: #fff4e6;
             --panel: #ffffff;
-            --text: #1a1d29;
-            --muted: #6b7280;
-            --accent: #0066cc;
+            --text: #2d1810;
+            --muted: #8b6f47;
+            --accent: #ff6b35;
             --accent-2: #059669;
-            --border: #e5e7eb;
+            --border: #f4d19e;
             --danger: #dc2626;
         }
 
         :root[data-theme="light"] body {
-            background: linear-gradient(180deg, #f5f7fa 0%, #e8ecef 100%);
+            background: linear-gradient(180deg, #fff4e6 0%, #ffe8cc 100%);
         }
 
         :root[data-theme="light"] .container {
@@ -40,12 +42,12 @@
         :root[data-theme="light"] input[type="text"],
         :root[data-theme="light"] select {
             background: #ffffff;
-            border-color: #d1d5db;
+            border-color: #f4d19e;
             color: var(--text);
         }
 
         :root[data-theme="light"] .panel {
-            background: #f9fafb;
+            background: #ffffff;
         }
 
         :root[data-theme="light"] .result {
@@ -53,8 +55,8 @@
         }
 
         :root[data-theme="light"] .tag {
-            background: #f3f4f6;
-            border-color: #e5e7eb;
+            background: #fff8f0;
+            border-color: #f4d19e;
         }
 
         :root[data-theme="light"] button {
@@ -62,11 +64,11 @@
         }
 
         :root[data-theme="light"] button:hover {
-            background: #f3f4f6;
+            background: #fff8f0;
         }
 
         :root[data-theme="light"] .sidebar {
-            background: #f9fafb;
+            background: #fff8f0;
         }
 
         :root[data-theme="light"] .sidebar-nav button.active {
@@ -79,7 +81,7 @@
         body {
             margin: 0;
             font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-            background: linear-gradient(180deg, #0b0c10 0%, #0f1117 100%);
+            background: linear-gradient(180deg, #0d1b2a 0%, #1b263b 100%);
             color: var(--text);
             min-height: 100svh;
             display: grid;
@@ -201,7 +203,7 @@
             padding: 12px 12px;
             border-radius: 10px;
             border: 1px solid var(--border);
-            background: #0f1117;
+            background: var(--panel);
             color: var(--text);
             outline: none;
         }
@@ -222,7 +224,7 @@
             padding: 14px 14px;
             border-radius: 12px;
             border: 1px solid var(--border);
-            background: #0f1218;
+            background: var(--panel);
         }
 
         .result h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
@@ -234,7 +236,7 @@
             gap: 8px;
             font-size: 12px;
             color: var(--muted);
-            background: #0f1218;
+            background: var(--panel);
             border: 1px solid var(--border);
             padding: 6px 10px;
             border-radius: 999px;
@@ -719,6 +721,10 @@
                     <div>
                         <h1>Cloud and Traffic Insight Flow Calculator</h1>
                         <div class="subtle">Calculate flow units and estimate AWS costs for ThousandEyes Cloud Insights Flow Logs integration.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="tag" aria-live="polite" id="flowcalcCurrencyTag">Currency: <strong class="accent" id="flowcalcCurrencyTagValue">USD</strong></div>
+                        <button id="flowcalcThemeToggle" type="button" style="padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer; font-size:12px;" title="Toggle light/dark mode">🌙</button>
                     </div>
                 </header>
 
@@ -1211,6 +1217,7 @@
             // Theme toggle
             const themeToggle = document.getElementById('themeToggle');
             const syntheticsThemeToggle = document.getElementById('syntheticsThemeToggle');
+            const flowcalcThemeToggle = document.getElementById('flowcalcThemeToggle');
             const root = document.documentElement;
             const THEME_KEY = 'teTheme';
             
@@ -1225,6 +1232,10 @@
                 if (syntheticsThemeToggle) {
                     syntheticsThemeToggle.textContent = icon;
                     syntheticsThemeToggle.title = title;
+                }
+                if (flowcalcThemeToggle) {
+                    flowcalcThemeToggle.textContent = icon;
+                    flowcalcThemeToggle.title = title;
                 }
                 try {
                     localStorage.setItem(THEME_KEY, theme);
@@ -1255,6 +1266,13 @@
             
             if (syntheticsThemeToggle) {
                 syntheticsThemeToggle.addEventListener('click', () => {
+                    const current = root.getAttribute('data-theme') || 'dark';
+                    setTheme(current === 'light' ? 'dark' : 'light');
+                });
+            }
+            
+            if (flowcalcThemeToggle) {
+                flowcalcThemeToggle.addEventListener('click', () => {
                     const current = root.getAttribute('data-theme') || 'dark';
                     setTheme(current === 'light' ? 'dark' : 'light');
                 });
@@ -1860,7 +1878,7 @@
                 del.style.padding = '8px 10px';
                 del.style.borderRadius = '8px';
                 del.style.border = '1px solid var(--border)';
-                del.style.background = '#0f1218';
+                del.style.background = 'var(--panel)';
                 del.style.color = 'var(--text)';
 
                 del.addEventListener('click', () => {
@@ -2207,8 +2225,10 @@
                 const baseCurrency = (unifiedCurrencyEl.value || 'USD').toUpperCase();
                 
                 // Update all currency tags
+                const flowcalcCurrencyTagValue = document.getElementById('flowcalcCurrencyTagValue');
                 if (currencyTagValue) currencyTagValue.textContent = baseCurrency;
                 if (syntheticsCurrencyTagValue) syntheticsCurrencyTagValue.textContent = baseCurrency;
+                if (flowcalcCurrencyTagValue) flowcalcCurrencyTagValue.textContent = baseCurrency;
                 
                 // Save currency preference
                 try {
