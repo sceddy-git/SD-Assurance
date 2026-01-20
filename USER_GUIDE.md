@@ -151,20 +151,19 @@ The EPA Licensing tool allows you to manage and monitor Endpoint Agent licenses 
   - **Last refresh status**: Timestamp and success/error message
 
 **Troubleshooting:**
-- If account groups don't load, verify the API proxy server is running
-- Check browser console (F12) for detailed error messages
+- If account groups don't load, check browser console (F12) for detailed error messages
 - Verify your API token is correct and has appropriate permissions
+- If you see CORS errors, the ThousandEyes API may not allow cross-origin requests from your browser origin
 
 ### Use Cases
 
 **Monitoring License Distribution:**
-1. Start the API proxy server
-2. Enter your API token and click "Load Account Groups"
-3. Select an account group from the dropdown
-4. Optionally select labels to filter specific agent groups
-5. Enable dry run mode
-6. Click "Refresh license counts"
-7. Review the current distribution of Advantage vs Essentials licenses
+1. Enter your API token and click "Load Account Groups"
+2. Select an account group from the dropdown
+3. Optionally select labels to filter specific agent groups
+4. Enable dry run mode
+5. Click "Refresh license counts"
+6. Review the current distribution of Advantage vs Essentials licenses
 
 **Filtering by Organization:**
 - Use the account group dropdown to switch between different organizations
@@ -180,8 +179,7 @@ The EPA Licensing tool allows you to manage and monitor Endpoint Agent licenses 
 - Always use dry run mode when testing
 - Never share screenshots or recordings showing your API token
 - Consider using read-only API tokens for monitoring operations
-- Keep the API proxy server local or in a trusted environment
-- The proxy server does not store tokens but forwards them to ThousandEyes API
+- API tokens are only stored in browser local storage and never transmitted to third parties
 
 ---
 
@@ -719,10 +717,10 @@ All costs are displayed in your selected currency:
 
 **API Calls Failing:**
 - Verify API token is correct and not expired
-- Check API base URL is correct
 - Ensure Account Group ID is valid
-- Check browser console for detailed error messages
-- Verify CORS is enabled if accessing from a custom domain
+- Check browser console (F12) for detailed error messages
+- If you see CORS errors, the ThousandEyes API may not allow cross-origin requests
+- Verify network connectivity and that the API endpoint is accessible
 
 **Dry Run Mode Not Working:**
 - Dry run mode simulates API calls (no actual changes)
