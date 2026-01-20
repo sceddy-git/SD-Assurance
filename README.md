@@ -14,9 +14,12 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
   - Customizable tiered pricing with reset to defaults functionality
   - Persistent values via `localStorage`
 - **EPA Licensing** – Manage operational insights with:
-  - API base/token/account group configuration + dry-run toggle
-  - Agent tag filters and list endpoint path
+  - API token authentication
+  - Dynamic account group selection (populated from API)
+  - Dynamic label selection (populated from API based on selected account group)
+  - Multi-select label filtering for agent queries
   - Live counts of Advantage vs Essentials agents (simulated in dry-run mode)
+  - Python proxy server to handle CORS restrictions
 - **EPA Scheduler** – Automate enabling/disabling agents by label:
   - Time-of-day schedules with wrap-around support (e.g., 18:00–08:00)
   - Organization name and account group fields for each schedule entry

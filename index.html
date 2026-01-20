@@ -473,40 +473,29 @@
 
         <section id="tab-flows" class="stack-lg" aria-label="EPA Licensing" style="display:none;">
             <div class="panel stack-lg">
-                <div class="row">
+                <div class="row-1">
                     <div class="control">
-                        <label for="apiBase">ThousandEyes API base URL</label>
-                        <input id="apiBase" name="apiBase" type="text" placeholder="https://api.thousandeyes.com/v7">
-                        <div class="hint">Set your API base. Must allow CORS in browser context.</div>
-                    </div>
-                    <div class="control">
-                        <label for="apiToken">API Token</label>
+                        <label for="apiToken">API Key</label>
                         <input id="apiToken" name="apiToken" type="text" placeholder="TE Bearer token">
-                        <div class="hint">Stored only in your browser. Do not share.</div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="control">
-                        <label for="accountGroupId">Account Group ID</label>
-                        <input id="accountGroupId" name="accountGroupId" type="text" placeholder="e.g. 12345">
-                    </div>
-                    <div class="control">
-                        <label for="switchEndpoint">License switch endpoint path</label>
-                        <input id="switchEndpoint" name="switchEndpoint" type="text" placeholder="/v6/endpoint-agents/license">
-                        <div class="hint">Full URL will be base + path. Body will include desired license.</div>
+                        <div class="hint">Stored only in your browser. Do not share. Enter token and click "Load Account Groups" to populate dropdowns.</div>
+                        <button id="loadAccountGroups" type="button" style="margin-top: 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px;">Load Account Groups</button>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="control">
-                        <label for="agentTags">Endpoint agent tags</label>
-                        <input id="agentTags" name="agentTags" type="text" placeholder="tagA, tagB">
-                        <div class="hint">Comma-separated tags to include when switching licenses or counting agents.</div>
+                        <label for="accountGroupId">Account Group</label>
+                        <select id="accountGroupId" name="accountGroupId" style="width: 100%; padding: 12px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); outline: none;">
+                            <option value="">-- Select Account Group --</option>
+                        </select>
+                        <div class="hint">Select an account group to load available labels. Labels will update automatically.</div>
                     </div>
                     <div class="control">
-                        <label for="agentsEndpoint">Agents list endpoint path</label>
-                        <input id="agentsEndpoint" name="agentsEndpoint" type="text" placeholder="/v6/endpoint-agents">
-                        <div class="hint">Used for counting licenses per type.</div>
+                        <label for="agentTags">Labels</label>
+                        <select id="agentTags" name="agentTags" multiple size="5" style="width: 100%; padding: 12px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); outline: none;">
+                            <option value="">-- Select Account Group first --</option>
+                        </select>
+                        <div class="hint">Hold Ctrl/Cmd to select multiple labels. Leave empty to include all agents.</div>
                     </div>
                 </div>
 
@@ -523,7 +512,7 @@
                 <div class="row-1">
                     <div class="control">
                         <button id="refreshCounts" type="button" style="padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); width:100%;">Refresh license counts</button>
-                        <div class="hint">Runs the ThousandEyes agent list endpoint (filtered by tags) and summarizes Advantage vs Essentials counts.</div>
+                        <div class="hint">Runs the ThousandEyes agent list endpoint (filtered by labels) and summarizes Advantage vs Essentials counts.</div>
                     </div>
                 </div>
             </div>
@@ -1325,14 +1314,22 @@
             let tiersEssUSD;
 
             // Workflows elements
-            const apiBaseEl = document.getElementById('apiBase');
+            // API base URL - use local proxy server if available, otherwise direct API (may have CORS issues)
+            // To use Python proxy: 1) Install: pip install flask flask-cors requests
+            //                       2) Run: python3 api_proxy.py
+            //                       3) Set API_PROXY_BASE to 'http://localhost:5000/api'
+            const API_PROXY_BASE = 'http://localhost:5000/api';  // Change this if proxy runs on different port
+            const USE_PROXY = true;  // Set to false to use direct API (will likely fail due to CORS)
+            const API_BASE = USE_PROXY ? API_PROXY_BASE : 'https://api.thousandeyes.com/v7';
+            const AGENTS_ENDPOINT = '/endpoint/agents';
+            const ENDPOINT_STATE_ENDPOINT = '/v6/endpoint-agents/state';
+            
             const apiTokenEl = document.getElementById('apiToken');
             const accountGroupIdEl = document.getElementById('accountGroupId');
-            const switchEndpointEl = document.getElementById('switchEndpoint');
             const agentTagsEl = document.getElementById('agentTags');
-            const agentsEndpointEl = document.getElementById('agentsEndpoint');
             const dryRunEl = document.getElementById('dryRun');
             const refreshCountsBtn = document.getElementById('refreshCounts');
+            const loadAccountGroupsBtn = document.getElementById('loadAccountGroups');
             const currentAdvCountEl = document.getElementById('currentAdvCount');
             const currentEssCountEl = document.getElementById('currentEssCount');
             const lastCountStatusEl = document.getElementById('lastCountStatus');
@@ -1375,12 +1372,9 @@
                 ],
                 // workflows defaults
                 activeTab: 'calc',
-                apiBase: 'https://api.thousandeyes.com/v7',
                 apiToken: '',
                 accountGroupId: '',
-                switchEndpoint: '/v6/endpoint-agents/license',
                 agentTags: '',
-                agentsEndpoint: '/v6/endpoint-agents',
                 dryRun: true,
                 schedulerEnabled: false,
                 schedulerFrequency: 60,
@@ -1461,13 +1455,27 @@
                 // set active tab
                 setTab(blended.activeTab || 'calc');
                 // seed API/config to inputs
-                apiBaseEl.value = blended.apiBase || defaults.apiBase;
                 apiTokenEl.value = blended.apiToken || defaults.apiToken;
                 accountGroupIdEl.value = blended.accountGroupId || defaults.accountGroupId;
-                switchEndpointEl.value = blended.switchEndpoint || defaults.switchEndpoint;
-                agentTagsEl.value = blended.agentTags || defaults.agentTags;
-                agentsEndpointEl.value = blended.agentsEndpoint || defaults.agentsEndpoint;
+                
+                // Handle multi-select labels - restore selected values
+                if (agentTagsEl.multiple && blended.agentTags) {
+                    const selectedLabels = Array.isArray(blended.agentTags) 
+                        ? blended.agentTags 
+                        : blended.agentTags.split(',').map(s => s.trim()).filter(Boolean);
+                    Array.from(agentTagsEl.options).forEach(option => {
+                        option.selected = selectedLabels.includes(option.value);
+                    });
+                } else if (!agentTagsEl.multiple) {
+                    agentTagsEl.value = blended.agentTags || defaults.agentTags;
+                }
+                
                 dryRunEl.checked = blended.dryRun !== undefined ? !!blended.dryRun : defaults.dryRun;
+                
+                // Load labels if account group is selected
+                if (accountGroupIdEl.value && apiTokenEl.value.trim()) {
+                    setTimeout(() => loadLabels(), 100);
+                }
                 schedulerEnabledEl.checked = blended.schedulerEnabled || false;
                 schedulerFrequencyEl.value = blended.schedulerFrequency || defaults.schedulerFrequency;
                 renderSchedulerEntries(blended.schedulerEntries || defaults.schedulerEntries);
@@ -1582,12 +1590,11 @@
                     tiersEss: readTiers('ess'),
                     // workflows
                     activeTab,
-                    apiBase: apiBaseEl.value,
                     apiToken: apiTokenEl.value,
                     accountGroupId: accountGroupIdEl.value,
-                    switchEndpoint: switchEndpointEl.value,
-                    agentTags: agentTagsEl.value,
-                    agentsEndpoint: agentsEndpointEl.value,
+                    agentTags: agentTagsEl.multiple 
+                        ? Array.from(agentTagsEl.selectedOptions).map(opt => opt.value).filter(Boolean)
+                        : agentTagsEl.value,
                     dryRun: !!dryRunEl.checked,
                     schedulerEnabled: !!schedulerEnabledEl.checked,
                     schedulerFrequency: schedulerFrequencyEl.value,
@@ -2302,20 +2309,188 @@
             } catch {}
 
             function getTagList() {
+                // Handle multi-select dropdown
+                if (agentTagsEl.multiple) {
+                    return Array.from(agentTagsEl.selectedOptions)
+                        .map(option => option.value)
+                        .filter(Boolean);
+                }
+                // Fallback for text input (if still used elsewhere)
                 return (agentTagsEl.value || '')
                     .split(',')
                     .map(tag => tag.trim())
                     .filter(Boolean);
             }
+
+            // Load Account Groups from API
+            async function loadAccountGroups() {
+                const token = apiTokenEl.value.trim();
+                if (!token) {
+                    alert('Please enter an API token first');
+                    return;
+                }
+
+                const btn = loadAccountGroupsBtn;
+                const originalText = btn.textContent;
+                btn.textContent = 'Loading...';
+                btn.disabled = true;
+
+                try {
+                    // Use proxy endpoint or direct API
+                    const url = USE_PROXY ? `${API_PROXY_BASE}/account-groups` : `${API_BASE}/account-groups`;
+                    console.log('Fetching account groups from:', url);
+                    
+                    const resp = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/hal+json'
+                        }
+                    });
+
+                    console.log('Response status:', resp.status, resp.statusText);
+
+                    if (!resp.ok) {
+                        let errorText = '';
+                        try {
+                            errorText = await resp.text();
+                            console.error('Error response body:', errorText);
+                        } catch (e) {
+                            errorText = resp.statusText;
+                        }
+                        throw new Error(`API ${resp.status}: ${errorText || resp.statusText}`);
+                    }
+
+                    const data = await resp.json();
+                    const accountGroups = data?.accountGroups || [];
+
+                    // Clear existing options (except the first placeholder)
+                    accountGroupIdEl.innerHTML = '<option value="">-- Select Account Group --</option>';
+
+                    // Populate dropdown
+                    accountGroups.forEach(ag => {
+                        const option = document.createElement('option');
+                        option.value = ag.aid || ag.accountGroupId || '';
+                        const displayName = ag.accountGroupName || ag.organizationName || ag.aid || 'Unknown';
+                        option.textContent = `${displayName} (${ag.aid})`;
+                        accountGroupIdEl.appendChild(option);
+                    });
+
+                    // Auto-select if only one account group
+                    if (accountGroups.length === 1) {
+                        accountGroupIdEl.value = accountGroups[0].aid || accountGroups[0].accountGroupId || '';
+                        accountGroupIdEl.dispatchEvent(new Event('change'));
+                    }
+
+                    save();
+                } catch (err) {
+                    let errorMsg = err?.message || String(err);
+                    // Check for CORS or network errors
+                    if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+                        errorMsg = 'Network error: Failed to fetch. This may be a CORS issue. Make sure you are accessing the API from a domain that allows CORS, or use a CORS proxy.';
+                    }
+                    alert('Error loading account groups: ' + errorMsg);
+                    console.error('Error loading account groups:', err);
+                    // Show error in the account group dropdown too
+                    accountGroupIdEl.innerHTML = `<option value="">Error: ${errorMsg}</option>`;
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            }
+
+            // Load Labels for selected Account Group
+            async function loadLabels() {
+                const token = apiTokenEl.value.trim();
+                const accountGroupId = accountGroupIdEl.value;
+                
+                if (!token) {
+                    agentTagsEl.innerHTML = '<option value="">-- Enter API token first --</option>';
+                    return;
+                }
+
+                if (!accountGroupId) {
+                    agentTagsEl.innerHTML = '<option value="">-- Select Account Group first --</option>';
+                    return;
+                }
+
+                // Show loading state
+                agentTagsEl.innerHTML = '<option value="">Loading labels...</option>';
+                agentTagsEl.disabled = true;
+
+                try {
+                    // Use proxy endpoint or direct API
+                    const url = USE_PROXY 
+                        ? `${API_PROXY_BASE}/endpoint/labels?aid=${encodeURIComponent(accountGroupId)}`
+                        : `${API_BASE}/endpoint/labels?aid=${encodeURIComponent(accountGroupId)}`;
+                    const resp = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/hal+json'
+                        }
+                    });
+
+                    if (!resp.ok) {
+                        throw new Error(`API ${resp.status}: ${resp.statusText}`);
+                    }
+
+                    const data = await resp.json();
+                    // Based on Postman collection: response has "labels" array with "id" and "name" fields
+                    const labels = data?.labels || [];
+
+                    // Clear and populate labels
+                    agentTagsEl.innerHTML = '';
+                    
+                    if (labels.length === 0) {
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = '-- No labels found --';
+                        agentTagsEl.appendChild(option);
+                    } else {
+                        labels.forEach(label => {
+                            const option = document.createElement('option');
+                            // Use label name as value (as per Postman collection structure)
+                            option.value = label.name || label.id || '';
+                            option.textContent = label.name || label.id || 'Unknown';
+                            agentTagsEl.appendChild(option);
+                        });
+                    }
+
+                    save();
+                } catch (err) {
+                    agentTagsEl.innerHTML = '<option value="">Error loading labels</option>';
+                    console.error('Error loading labels:', err);
+                } finally {
+                    agentTagsEl.disabled = false;
+                }
+            }
+
+            // Event listeners
+            if (loadAccountGroupsBtn) {
+                loadAccountGroupsBtn.addEventListener('click', loadAccountGroups);
+            }
+
+            if (accountGroupIdEl) {
+                accountGroupIdEl.addEventListener('change', () => {
+                    loadLabels();
+                    save();
+                });
+            }
+
+            // Load labels when API token changes (if account group is already selected)
+            if (apiTokenEl) {
+                apiTokenEl.addEventListener('blur', () => {
+                    if (accountGroupIdEl.value) {
+                        loadLabels();
+                    }
+                });
+            }
+
             dryRunEl.addEventListener('change', () => { save(); });
 
             const workflowInputs = [
-                apiBaseEl,
                 apiTokenEl,
                 accountGroupIdEl,
-                switchEndpointEl,
                 agentTagsEl,
-                agentsEndpointEl,
                 schedulerFrequencyEl
             ];
             workflowInputs.forEach(el => {
@@ -2335,17 +2510,27 @@
                     lastCountStatusEl.textContent = 'Dry run at ' + new Date().toLocaleTimeString();
                     return;
                 }
-                const base = (apiBaseEl.value || '').replace(/\/$/, '');
-                const path = agentsEndpointEl.value || '';
                 const token = apiTokenEl.value.trim();
-                if (!base || !path || !token) {
-                    lastCountStatusEl.textContent = 'Missing API configuration';
+                const accountGroupId = accountGroupIdEl.value;
+                
+                if (!token) {
+                    lastCountStatusEl.textContent = 'Missing API token';
                     return;
                 }
-                const url = new URL(base + path, window.location.origin);
+                
+                if (!accountGroupId) {
+                    lastCountStatusEl.textContent = 'Please select an Account Group';
+                    return;
+                }
+
+                const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
+                const path = USE_PROXY ? '/endpoint/agents' : AGENTS_ENDPOINT;
                 const params = new URLSearchParams();
+                params.append('aid', accountGroupId);
                 tags.forEach(tag => params.append('tag', tag));
-                const finalUrl = params.toString() ? `${base + path}?${params.toString()}` : base + path;
+                const finalUrl = USE_PROXY 
+                    ? `${base}${path}?${params.toString()}`
+                    : `${base}${path}?${params.toString()}`;
                 try {
                     lastCountStatusEl.textContent = 'Fetching…';
                     const resp = await fetch(finalUrl, {
@@ -2850,12 +3035,15 @@
                 // Fetch Org Name from API using Account Group ID
                 let orgName = accountId; // Default to accountId if API call fails
                 try {
-                    const base = (apiBaseEl.value || '').replace(/\/$/, '');
-                    if (base && token) {
-                        const orgUrl = `${base}/v7/account-groups/${accountId}`;
+                    const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
+                    if (token) {
+                        const orgUrl = USE_PROXY 
+                            ? `${base}/account-groups/${accountId}`
+                            : `${base}/account-groups/${accountId}`;
                         const orgResp = await fetch(orgUrl, {
                             headers: {
-                                'Authorization': `Bearer ${token}`
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/hal+json'
                             }
                         });
                         if (orgResp.ok) {
@@ -2998,10 +3186,10 @@
                     await new Promise(resolve => setTimeout(resolve, 150));
                     return { dryRun: true, label, action };
                 }
-                const base = (apiBaseEl.value || '').replace(/\/$/, '');
-                const path = '/v6/endpoint-agents/state';
-                if (!base || !path || !token) throw new Error('Missing API configuration');
-                const url = base + path;
+                const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
+                const path = USE_PROXY ? '/v6/endpoint-agents/state' : ENDPOINT_STATE_ENDPOINT;
+                if (!token) throw new Error('Missing API configuration');
+                const url = `${base}${path}`;
                 const body = {
                     label,
                     action,

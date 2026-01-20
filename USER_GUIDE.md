@@ -101,73 +101,95 @@ The calculator displays:
 ## EPA Licensing
 
 ### Overview
-The EPA Licensing tool allows you to manage and monitor Endpoint Agent licenses through the ThousandEyes API. You can view current license counts and switch agent licenses between Advantage and Essentials.
+The EPA Licensing tool allows you to manage and monitor Endpoint Agent licenses through the ThousandEyes API. You can view current license counts and filter agents by account group and labels.
 
 ### Prerequisites
+- **API Proxy Server Running**: The Python proxy server must be running (see Setup below)
 - Valid ThousandEyes API token
-- Account Group ID
-- API base URL (default: `https://api.thousandeyes.com/v7`)
+- Access to at least one ThousandEyes Account Group
+
+### Setup
+
+**Start the API Proxy Server** (Required):
+1. Install Python dependencies: `pip install -r requirements.txt`
+2. Start the proxy: `python3 api_proxy.py`
+3. The server runs on `http://localhost:5000` by default
+4. See `README_API_PROXY.md` for detailed setup instructions
+
+The proxy server is required because browsers block direct API calls to external domains due to CORS (Cross-Origin Resource Sharing) security restrictions.
 
 ### Step-by-Step Guide
 
-#### 1. Configure API Settings
+#### 1. Enter API Token
 
-**API Base URL:**
-- Default: `https://api.thousandeyes.com/v7`
-- Update if using a different endpoint or version
-
-**API Token:**
-- Enter your ThousandEyes Bearer token
+**API Key (Token):**
+- Enter your ThousandEyes Bearer token in the "API Key" field
 - **Security Note:** Tokens are stored only in your browser's local storage
 - Never share your token or commit it to version control
+- After entering your token, click "Load Account Groups" to fetch available account groups
 
-**Account Group ID:**
-- Enter your ThousandEyes Account Group ID (e.g., `12345`)
+#### 2. Select Account Group
 
-**License Switch Endpoint:**
-- Default: `/v6/endpoint-agents/license`
-- Modify if using a custom endpoint
+**Account Group:**
+- Click "Load Account Groups" button to fetch account groups from the API
+- The dropdown will populate with available account groups
+- Each entry shows the account group name and ID: `Account Name (ID)`
+- Select your desired account group from the dropdown
+- **Note:** Labels will automatically populate once an account group is selected
 
-#### 2. Configure Agent Filters
+#### 3. Select Labels (Optional)
 
-**Endpoint Agent Tags:**
-- Enter comma-separated tags to filter agents (e.g., `production,us-east`)
-- Only agents matching these tags will be counted or modified
-- Leave empty to include all agents
+**Labels:**
+- After selecting an account group, the Labels dropdown automatically populates with available labels
+- Hold **Ctrl** (Windows/Linux) or **Cmd** (Mac) to select multiple labels
+- Selected labels filter which agents are included in license counts
+- **Leave empty** to include all agents in the account group
+- You can deselect all labels by clicking elsewhere
 
-**Agents List Endpoint Path:**
-- Default: `/v6/endpoint-agents`
-- Path used to retrieve agent list and count licenses
-
-#### 3. Dry Run Mode (Recommended)
+#### 4. Dry Run Mode (Recommended)
 - **Always enable "Dry run mode" initially** to test without making actual API calls
 - In dry run mode, the tool simulates actions and logs what would happen
 - Disable only when ready to perform real API operations
 
-#### 4. Refresh License Counts
+#### 5. Refresh License Counts
 - Click "Refresh license counts" to fetch current agent counts from the API
 - Results display:
   - **Advantage agents (current)**: Count of agents with Advantage licenses
   - **Essentials agents (current)**: Count of agents with Essentials licenses
   - **Last refresh status**: Timestamp and success/error message
 
+**Troubleshooting:**
+- If account groups don't load, verify the API proxy server is running
+- Check browser console (F12) for detailed error messages
+- Verify your API token is correct and has appropriate permissions
+
 ### Use Cases
 
 **Monitoring License Distribution:**
-1. Configure API credentials
-2. Set agent tags if you want to filter specific groups
-3. Enable dry run mode
-4. Click "Refresh license counts"
-5. Review the current distribution of Advantage vs Essentials licenses
+1. Start the API proxy server
+2. Enter your API token and click "Load Account Groups"
+3. Select an account group from the dropdown
+4. Optionally select labels to filter specific agent groups
+5. Enable dry run mode
+6. Click "Refresh license counts"
+7. Review the current distribution of Advantage vs Essentials licenses
 
-**Switching Licenses** (requires additional API integration):
-- This tool provides the foundation for license switching
-- Use the configured settings with the API endpoint to change agent licenses programmatically
+**Filtering by Organization:**
+- Use the account group dropdown to switch between different organizations
+- Each organization's labels will load automatically
+- Filter agents by selecting specific labels (multi-select)
+
+**Filtering by Labels:**
+- Select one or more labels to filter agents
+- Only agents matching the selected labels will be counted
+- Useful for segmenting agents by department, location, or function
 
 ### Security Best Practices
 - Always use dry run mode when testing
 - Never share screenshots or recordings showing your API token
 - Consider using read-only API tokens for monitoring operations
+- Keep the API proxy server local or in a trusted environment
+- The proxy server does not store tokens but forwards them to ThousandEyes API
 
 ---
 
