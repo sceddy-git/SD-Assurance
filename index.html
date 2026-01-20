@@ -477,7 +477,7 @@
                     <div class="control">
                         <label for="apiToken">API Key</label>
                         <input id="apiToken" name="apiToken" type="text" placeholder="TE Bearer token">
-                        <div class="hint">Stored only in your browser. Do not share. Enter token and click "Load Account Groups" to populate dropdowns.</div>
+                        <div class="hint">Stored only in your browser. Do not share. Enter token and click "Load Account Groups" to populate dropdowns. Note: Direct API calls may fail due to CORS restrictions.</div>
                         <button id="loadAccountGroups" type="button" style="margin-top: 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px;">Load Account Groups</button>
                     </div>
                 </div>
@@ -1314,13 +1314,8 @@
             let tiersEssUSD;
 
             // Workflows elements
-            // API base URL - use local proxy server if available, otherwise direct API (may have CORS issues)
-            // To use Python proxy: 1) Install: pip install flask flask-cors requests
-            //                       2) Run: python3 api_proxy.py
-            //                       3) Set API_PROXY_BASE to 'http://localhost:5000/api'
-            const API_PROXY_BASE = 'http://localhost:5000/api';  // Change this if proxy runs on different port
-            const USE_PROXY = true;  // Set to false to use direct API (will likely fail due to CORS)
-            const API_BASE = USE_PROXY ? API_PROXY_BASE : 'https://api.thousandeyes.com/v7';
+            // API base URL and endpoints - direct API calls
+            const API_BASE = 'https://api.thousandeyes.com/v7';
             const AGENTS_ENDPOINT = '/endpoint/agents';
             const ENDPOINT_STATE_ENDPOINT = '/v6/endpoint-agents/state';
             
@@ -2336,8 +2331,7 @@
                 btn.disabled = true;
 
                 try {
-                    // Use proxy endpoint or direct API
-                    const url = USE_PROXY ? `${API_PROXY_BASE}/account-groups` : `${API_BASE}/account-groups`;
+                    const url = `${API_BASE}/account-groups`;
                     console.log('Fetching account groups from:', url);
                     
                     const resp = await fetch(url, {
@@ -2386,7 +2380,7 @@
                     let errorMsg = err?.message || String(err);
                     // Check for CORS or network errors
                     if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
-                        errorMsg = 'Network error: Failed to fetch. This may be a CORS issue. Make sure you are accessing the API from a domain that allows CORS, or use a CORS proxy.';
+                        errorMsg = 'Network error: Failed to fetch. This may be a CORS issue or network connectivity problem. Check your browser console for details.';
                     }
                     alert('Error loading account groups: ' + errorMsg);
                     console.error('Error loading account groups:', err);
@@ -2418,10 +2412,7 @@
                 agentTagsEl.disabled = true;
 
                 try {
-                    // Use proxy endpoint or direct API
-                    const url = USE_PROXY 
-                        ? `${API_PROXY_BASE}/endpoint/labels?aid=${encodeURIComponent(accountGroupId)}`
-                        : `${API_BASE}/endpoint/labels?aid=${encodeURIComponent(accountGroupId)}`;
+                    const url = `${API_BASE}/endpoint/labels?aid=${encodeURIComponent(accountGroupId)}`;
                     const resp = await fetch(url, {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -2523,14 +2514,12 @@
                     return;
                 }
 
-                const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
-                const path = USE_PROXY ? '/endpoint/agents' : AGENTS_ENDPOINT;
+                const base = API_BASE.replace(/\/$/, '');
+                const path = AGENTS_ENDPOINT;
                 const params = new URLSearchParams();
                 params.append('aid', accountGroupId);
                 tags.forEach(tag => params.append('tag', tag));
-                const finalUrl = USE_PROXY 
-                    ? `${base}${path}?${params.toString()}`
-                    : `${base}${path}?${params.toString()}`;
+                const finalUrl = `${base}${path}?${params.toString()}`;
                 try {
                     lastCountStatusEl.textContent = 'Fetching…';
                     const resp = await fetch(finalUrl, {
@@ -3035,11 +3024,9 @@
                 // Fetch Org Name from API using Account Group ID
                 let orgName = accountId; // Default to accountId if API call fails
                 try {
-                    const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
+                    const base = API_BASE.replace(/\/$/, '');
                     if (token) {
-                        const orgUrl = USE_PROXY 
-                            ? `${base}/account-groups/${accountId}`
-                            : `${base}/account-groups/${accountId}`;
+                        const orgUrl = `${base}/account-groups/${accountId}`;
                         const orgResp = await fetch(orgUrl, {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -3186,8 +3173,8 @@
                     await new Promise(resolve => setTimeout(resolve, 150));
                     return { dryRun: true, label, action };
                 }
-                const base = USE_PROXY ? API_PROXY_BASE : API_BASE.replace(/\/$/, '');
-                const path = USE_PROXY ? '/v6/endpoint-agents/state' : ENDPOINT_STATE_ENDPOINT;
+                const base = API_BASE.replace(/\/$/, '');
+                const path = ENDPOINT_STATE_ENDPOINT;
                 if (!token) throw new Error('Missing API configuration');
                 const url = `${base}${path}`;
                 const body = {

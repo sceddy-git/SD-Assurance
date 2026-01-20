@@ -19,7 +19,7 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
   - Dynamic label selection (populated from API based on selected account group)
   - Multi-select label filtering for agent queries
   - Live counts of Advantage vs Essentials agents (simulated in dry-run mode)
-  - Python proxy server to handle CORS restrictions
+  - Direct API calls to ThousandEyes API
 - **EPA Scheduler** – Automate enabling/disabling agents by label:
   - Time-of-day schedules with wrap-around support (e.g., 18:00–08:00)
   - Organization name and account group fields for each schedule entry
@@ -54,11 +54,21 @@ This repository hosts a lightweight, browser‑only tool that helps you plan, li
 - The badge above reflects the status of the GitHub Pages deployment workflow. Click it to open run logs.
 
 ### Local Usage
+
 1. Clone/download this repository.
 2. Open `index.html` in any modern browser (Chrome, Edge, Safari, Firefox).
-3. Configure the EPA Licensing tab with your ThousandEyes API base URL, token, account group, and tag filters.  
-   - Keep “Dry run mode” enabled while experimenting; disable it only when ready to call production APIs.
-4. Use the EPA Scheduler tab to define labels, time windows, and desired enable/disable actions. Leave the tab open for the scheduler to keep running.
+3. **Configure EPA Licensing:**
+   - Enter your ThousandEyes API token
+   - Click "Load Account Groups" to populate the account group dropdown
+   - Select an account group (labels will auto-populate)
+   - Select labels to filter agents (optional, multi-select)
+   - Keep "Dry run mode" enabled while experimenting; disable only when ready to call production APIs
+4. **Use EPA Scheduler:**
+   - Navigate to the EPA Scheduler tab
+   - Define labels, time windows, and desired enable/disable actions
+   - Leave the tab open for the scheduler to keep running
+
+> **Note:** Direct API calls from the browser may be blocked by CORS (Cross-Origin Resource Sharing) restrictions depending on your ThousandEyes API configuration. If you encounter CORS errors, you may need to configure your API server to allow cross-origin requests, or use a browser extension that handles CORS for development purposes.
 
 ### GitHub Pages Deployment
 This repo includes `.github/workflows/deploy.yml`, which publishes the site to GitHub Pages whenever `main` is updated.

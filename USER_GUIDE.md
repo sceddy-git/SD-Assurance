@@ -104,19 +104,11 @@ The calculator displays:
 The EPA Licensing tool allows you to manage and monitor Endpoint Agent licenses through the ThousandEyes API. You can view current license counts and filter agents by account group and labels.
 
 ### Prerequisites
-- **API Proxy Server Running**: The Python proxy server must be running (see Setup below)
 - Valid ThousandEyes API token
 - Access to at least one ThousandEyes Account Group
+- Modern web browser (Chrome, Edge, Safari, Firefox)
 
-### Setup
-
-**Start the API Proxy Server** (Required):
-1. Install Python dependencies: `pip install -r requirements.txt`
-2. Start the proxy: `python3 api_proxy.py`
-3. The server runs on `http://localhost:5000` by default
-4. See `README_API_PROXY.md` for detailed setup instructions
-
-The proxy server is required because browsers block direct API calls to external domains due to CORS (Cross-Origin Resource Sharing) security restrictions.
+> **Note:** Direct API calls from the browser may be blocked by CORS (Cross-Origin Resource Sharing) restrictions depending on your ThousandEyes API configuration. If you encounter CORS errors, check your browser console for details.
 
 ### Step-by-Step Guide
 
