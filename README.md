@@ -4,6 +4,8 @@
 
 This repository hosts a lightweight, browser‑only tool that helps you plan, license, and operate Cisco ThousandEyes Endpoint Agents (EPA). Open `index.html` directly or host it via GitHub Pages (workflow provided) to get a fully client‑side experience—no backend or build step required.
 
+📖 **User Documentation:** See [USER_GUIDE.md](./USER_GUIDE.md) for comprehensive documentation on all tools, features, and step-by-step instructions.
+
 ### Features
 - **EPA Calculator** – Enter a budget, tiered pricing for Advantage/Essentials, and rounding preferences. The tool computes:
   - Maximum agents under the supplied budget (tier-aware)
